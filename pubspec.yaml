@@ -1,0 +1,45 @@
+name: jeevan_sutra
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  image_picker: ^1.2.3
+  shared_preferences: ^2.5.5
+  http: ^1.6.0
+  firebase_ai: ^4.0.0
+  firebase_core: ^4.15.0
+  flutter_markdown: ^0.7.7+1
+  firebase_app_check: ^0.4.8
+  flutter_local_notifications: ^18.0.0
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/branding/jeevan_sutra_logo.png
+    - assets/branding/logo_emblem.png
+    - assets/branding/logo_wordmark.png
+    - assets/branding/logo_tagline.png
+    - assets/knowledge/plants.json
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/branding/logo_emblem.png"
+  adaptive_icon_background: "#183B2A"
+  adaptive_icon_foreground: "assets/branding/logo_emblem.png"
