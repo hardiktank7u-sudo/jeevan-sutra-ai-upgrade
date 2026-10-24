@@ -50,7 +50,7 @@ class _RitucharyaScreenState extends State<RitucharyaScreen> {
     final allSeasons = SampleData.seasonInfos;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text("Seasonal Wellness"),
         leading: IconButton(

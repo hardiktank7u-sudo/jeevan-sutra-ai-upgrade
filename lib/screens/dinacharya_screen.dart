@@ -87,7 +87,7 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text("Dinacharya Timeline"),
         leading: IconButton(

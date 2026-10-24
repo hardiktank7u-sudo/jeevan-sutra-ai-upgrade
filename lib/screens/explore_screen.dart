@@ -8,7 +8,6 @@ import '../theme/app_theme.dart';
 import '../widgets/botanical_background.dart';
 import 'ai_screen.dart';
 import 'dosha_assessment_screen.dart';
-import 'knowledge_library_screen.dart';
 import 'plant_detail_screen.dart';
 import 'scanner_screen.dart';
 import 'medicinal_plants_screen.dart';
@@ -166,7 +165,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: BotanicalBackground(
         child: SafeArea(
           child: SingleChildScrollView(
@@ -586,7 +585,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: articles.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               final art = articles[index];
               return InkWell(
@@ -735,7 +734,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             itemCount: plants.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
             itemBuilder: (context, index) {
               final p = plants[index];
               return InkWell(

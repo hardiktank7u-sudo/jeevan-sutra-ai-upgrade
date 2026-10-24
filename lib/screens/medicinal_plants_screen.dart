@@ -93,13 +93,13 @@ class _MedicinalPlantsScreenState extends State<MedicinalPlantsScreen> {
           (p.primaryUses?.toLowerCase().contains(q) ?? false);
 
       final matchesCategory = _selectedCategory == 'All' ||
-          (p.category != null && p.category!.toLowerCase().contains(_selectedCategory.split(' ').first.toLowerCase()));
+          p.category.toLowerCase().contains(_selectedCategory.split(' ').first.toLowerCase());
 
       return matchesSearch && matchesCategory;
     }).toList();
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text("Medicinal Plants"),
         leading: IconButton(
@@ -285,7 +285,7 @@ class _MedicinalPlantsScreenState extends State<MedicinalPlantsScreen> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: plants.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final plant = plants[index];
         final isSaved = _savedPlants.contains(plant.commonName);

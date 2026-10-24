@@ -39,13 +39,9 @@ Future<void> main() async {
 
   if (kIsWeb) {
     if (kDebugMode) {
-      await FirebaseAppCheck.instance.activate(
-        providerWeb: WebDebugProvider(),
-      );
+      await FirebaseAppCheck.instance.activate(providerWeb: WebDebugProvider());
     } else {
-      const siteKey = String.fromEnvironment(
-        'APP_CHECK_RECAPTCHA_V3_SITE_KEY',
-      );
+      const siteKey = String.fromEnvironment('APP_CHECK_RECAPTCHA_V3_SITE_KEY');
       if (siteKey.isEmpty) {
         throw StateError(
           'Set APP_CHECK_RECAPTCHA_V3_SITE_KEY for production web builds.',
@@ -105,10 +101,7 @@ class _StartupScreen extends StatefulWidget {
   final bool isDarkMode;
   final VoidCallback onToggleTheme;
 
-  const _StartupScreen({
-    required this.isDarkMode,
-    required this.onToggleTheme,
-  });
+  const _StartupScreen({required this.isDarkMode, required this.onToggleTheme});
 
   @override
   State<_StartupScreen> createState() => _StartupScreenState();
@@ -148,7 +141,8 @@ class MainNavigationContainer extends StatefulWidget {
   });
 
   @override
-  State<MainNavigationContainer> createState() => _MainNavigationContainerState();
+  State<MainNavigationContainer> createState() =>
+      _MainNavigationContainerState();
 }
 
 class _MainNavigationContainerState extends State<MainNavigationContainer> {
@@ -156,19 +150,31 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
   int _selectedIndex = 0;
   String _currentRoute = 'home';
   late UserProfile _userProfile;
+  int _profileRefreshToken = 0;
 
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    ExploreScreen(),
-    ScannerScreen(),
-    AiScreen(),
-    ProfileScreen(),
+  List<Widget> get _screens => [
+    const HomeScreen(),
+    const ExploreScreen(),
+    const ScannerScreen(),
+    const AiScreen(),
+    ProfileScreen(
+      refreshToken: _profileRefreshToken,
+      onProfileChanged: _syncUserProfile,
+    ),
   ];
+
+  String get _selectedRoute => const [
+    'home',
+    'explore',
+    'scanner',
+    'ai_assistant',
+    'profile',
+  ][_selectedIndex];
 
   @override
   void initState() {
     super.initState();
-    _userProfile = SampleData.defaultProfile;
+    _userProfile = SampleData.defaultProfile.copyWith();
     _syncUserProfile();
   }
 
@@ -177,12 +183,12 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
     final dosha = await LocalStorageService.instance.getDosha();
     if (mounted) {
       setState(() {
-        if (name.isNotEmpty && name != 'Wellness Explorer') {
-          _userProfile.name = name;
-        }
-        if (dosha != null && dosha.isNotEmpty) {
-          _userProfile.dominantPrakriti = dosha;
-        }
+        _userProfile = _userProfile.copyWith(
+          name: name,
+          dominantPrakriti: dosha != null && dosha.isNotEmpty
+              ? dosha
+              : SampleData.defaultProfile.dominantPrakriti,
+        );
       });
     }
   }
@@ -191,24 +197,10 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
     if (index < 0 || index >= _screens.length) return;
     setState(() {
       _selectedIndex = index;
-      switch (index) {
-        case 0:
-          _currentRoute = 'home';
-          break;
-        case 1:
-          _currentRoute = 'explore';
-          break;
-        case 2:
-          _currentRoute = 'scanner';
-          break;
-        case 3:
-          _currentRoute = 'ai_assistant';
-          break;
-        case 4:
-          _currentRoute = 'profile';
-          break;
-      }
+      _currentRoute = _selectedRoute;
+      if (index == 4) _profileRefreshToken++;
     });
+    _syncUserProfile();
   }
 
   void _onSelectDrawerDestination(String route) {
@@ -271,23 +263,35 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
           DoshaAssessmentScreen(
             onBack: () => Navigator.pop(context),
             onDoshaDetermined: (prakriti) {
+              if (!mounted) return;
               setState(() {
                 _userProfile.dominantPrakriti = prakriti;
               });
-              LocalStorageService.instance.saveDosha(prakriti);
             },
           ),
         );
         break;
       case 'auth':
         _pushScreen(
-          AuthScreen(
-            onAuthenticated: (newProfile) {
-              setState(() {
-                _userProfile = newProfile;
-              });
-              Navigator.pop(context);
-            },
+          Builder(
+            builder: (authContext) => AuthScreen(
+              onAuthenticated: (newProfile) async {
+                await LocalStorageService.instance.saveProfileName(
+                  newProfile.name,
+                );
+                await LocalStorageService.instance.saveDosha(
+                  newProfile.dominantPrakriti,
+                );
+                if (!mounted) return;
+                setState(() {
+                  _userProfile = newProfile;
+                });
+                if (authContext.mounted &&
+                    ModalRoute.of(authContext)?.isCurrent == true) {
+                  Navigator.of(authContext).pop();
+                }
+              },
+            ),
           ),
         );
         break;
@@ -296,10 +300,14 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
     }
   }
 
-  void _pushScreen(Widget screen) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => screen),
-    );
+  Future<void> _pushScreen(Widget screen) async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+    if (!mounted) return;
+    setState(() {
+      _currentRoute = _selectedRoute;
+      _profileRefreshToken++;
+    });
+    await _syncUserProfile();
   }
 
   String _getTitle() {
@@ -321,6 +329,7 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
 
   @override
   Widget build(BuildContext context) {
+    final screens = _screens;
     return Scaffold(
       key: _scaffoldKey,
       appBar: JeevanSutraAppBar(
@@ -338,7 +347,10 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
       ),
       body: IndexedStack(
         index: _selectedIndex,
-        children: _screens,
+        children: [
+          for (var index = 0; index < screens.length; index++)
+            TickerMode(enabled: index == _selectedIndex, child: screens[index]),
+        ],
       ),
       bottomNavigationBar: JeevanSutraBottomNavigation(
         currentIndex: _selectedIndex,

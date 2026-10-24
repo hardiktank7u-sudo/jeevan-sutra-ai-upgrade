@@ -1,6 +1,8 @@
 // Google AI Studio - Jeevan Sutra Plant Scanner Screen
 // High-tech botanical viewfinder, spectral diagnostics & Gemini plant taxonomy
+import 'dart:async';
 import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -14,7 +16,10 @@ import '../widgets/botanical_background.dart';
 import 'plant_detail_screen.dart';
 
 class ScannerScreen extends StatefulWidget {
-  const ScannerScreen({super.key});
+  const ScannerScreen({super.key, this.imagePicker, this.plantAnalyzer});
+
+  final Future<XFile?> Function(ImageSource source)? imagePicker;
+  final Future<PlantScanResult> Function(Uint8List bytes)? plantAnalyzer;
 
   @override
   State<ScannerScreen> createState() => _ScannerScreenState();
@@ -25,12 +30,14 @@ class _ScannerScreenState extends State<ScannerScreen>
   final ImagePicker _picker = ImagePicker();
 
   Uint8List? _selectedImage;
-  String? _selectedFileName;
   bool _isScanning = false;
   bool _flashActive = false;
   PlantScanResult? _scanResult;
   MedicinalPlant? _samplePlant;
   int _sampleIndex = 0;
+  int _scanGeneration = 0;
+  bool _isPickingImage = false;
+  Timer? _sampleScanTimer;
 
   List<Map<String, dynamic>> _history = [];
   late final AnimationController _laserController;
@@ -48,6 +55,8 @@ class _ScannerScreenState extends State<ScannerScreen>
 
   @override
   void dispose() {
+    _scanGeneration++;
+    _sampleScanTimer?.cancel();
     _laserController.dispose();
     super.dispose();
   }
@@ -61,44 +70,64 @@ class _ScannerScreenState extends State<ScannerScreen>
   }
 
   Future<void> _pickImage(ImageSource source) async {
+    if (_isPickingImage) return;
+    _isPickingImage = true;
+    var picking = true;
     try {
-      final XFile? file = await _picker.pickImage(
-        source: source,
-        imageQuality: 88,
-        maxWidth: 1600,
-        maxHeight: 1600,
-      );
+      final XFile? file = widget.imagePicker != null
+          ? await widget.imagePicker!(source)
+          : await _picker.pickImage(
+              source: source,
+              imageQuality: 88,
+              maxWidth: 1600,
+              maxHeight: 1600,
+            );
 
       if (file == null) return;
       final Uint8List bytes = await file.readAsBytes();
+      picking = false;
+      _isPickingImage = false;
       if (!mounted) return;
+      final generation = ++_scanGeneration;
+      _sampleScanTimer?.cancel();
 
       setState(() {
         _selectedImage = bytes;
-        _selectedFileName = file.name;
         _scanResult = null;
         _isScanning = true;
       });
 
-      await LocalStorageService.instance.addScanHistory(fileName: file.name);
-      await _loadHistory();
+      try {
+        await LocalStorageService.instance.addScanHistory(fileName: file.name);
+        await _loadHistory();
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('The scan could not be saved on this device.'),
+            ),
+          );
+        }
+      }
+      if (!mounted || generation != _scanGeneration) return;
 
       // Scan with Gemini AI
       try {
-        final result = await GeminiService.instance.analyzePlantImage(bytes);
-        if (!mounted) return;
+        final analyze =
+            widget.plantAnalyzer ?? GeminiService.instance.analyzePlantImage;
+        final result = await analyze(bytes);
+        if (!mounted || generation != _scanGeneration) return;
         setState(() {
           _scanResult = result;
           _isScanning = false;
         });
       } catch (e) {
-        // Fallback to sample botanical data
-        if (!mounted) return;
+        if (!mounted || generation != _scanGeneration) return;
         setState(() {
           _isScanning = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("AI diagnosis note: $e")),
+          SnackBar(content: Text(GeminiService.describeFailure(e))),
         );
       }
     } catch (e) {
@@ -107,22 +136,35 @@ class _ScannerScreenState extends State<ScannerScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Could not access camera/gallery: $e")),
       );
+    } finally {
+      if (picking) _isPickingImage = false;
     }
   }
 
   void _simulateSampleScan() {
+    final generation = ++_scanGeneration;
+    final current = SampleData.medicinalPlants[_sampleIndex];
+    _sampleScanTimer?.cancel();
     setState(() {
       _selectedImage = null;
       _isScanning = true;
       _scanResult = null;
     });
 
-    Future.delayed(const Duration(milliseconds: 1600), () {
-      if (!mounted) return;
-      final current = SampleData.medicinalPlants[_sampleIndex];
+    _sampleScanTimer = Timer(const Duration(milliseconds: 1600), () {
+      if (!mounted || generation != _scanGeneration) return;
       setState(() {
         _isScanning = false;
-        _scanResult = PlantScanResult(plantName: current.commonName, scientificName: current.botanicalName, confidence: 0.984, identification: current.primaryUses, traditionalUses: current.traditionalApplication, scientificEvidence: current.scientificEvidence, safetySummary: current.precautions, precautions: [current.precautions]);
+        _scanResult = PlantScanResult(
+          plantName: current.commonName,
+          scientificName: current.botanicalName,
+          confidence: 0.984,
+          identification: current.primaryUses,
+          traditionalUses: current.traditionalApplication,
+          scientificEvidence: current.scientificEvidence,
+          safetySummary: current.precautions,
+          precautions: [current.precautions],
+        );
       });
     });
   }
@@ -140,7 +182,7 @@ class _ScannerScreenState extends State<ScannerScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: BotanicalBackground(
         child: SafeArea(
           child: SingleChildScrollView(
@@ -156,7 +198,8 @@ class _ScannerScreenState extends State<ScannerScreen>
                 _buildActionButtons(isDark),
                 const SizedBox(height: 20),
                 if (_isScanning) _buildScanningIndicator(isDark),
-                if (_scanResult != null) _buildScanResultCard(_scanResult!, isDark),
+                if (_scanResult != null)
+                  _buildScanResultCard(_scanResult!, isDark),
                 const SizedBox(height: 20),
                 _buildScanHistory(isDark),
               ],
@@ -178,7 +221,9 @@ class _ScannerScreenState extends State<ScannerScreen>
             Icon(
               Icons.camera_alt_rounded,
               size: 14,
-              color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+              color: isDark
+                  ? JeevanSutraColors.freshLeaf
+                  : JeevanSutraColors.forestGreen,
             ),
             const SizedBox(width: 6),
             Text(
@@ -187,7 +232,9 @@ class _ScannerScreenState extends State<ScannerScreen>
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.1,
-                color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                color: isDark
+                    ? JeevanSutraColors.freshLeaf
+                    : JeevanSutraColors.forestGreen,
               ),
             ),
           ],
@@ -199,7 +246,9 @@ class _ScannerScreenState extends State<ScannerScreen>
             fontSize: 24,
             fontWeight: FontWeight.bold,
             letterSpacing: -0.3,
-            color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+            color: isDark
+                ? JeevanSutraColors.darkTextPrimary
+                : JeevanSutraColors.forestGreen,
           ),
         ),
         const SizedBox(height: 2),
@@ -207,7 +256,9 @@ class _ScannerScreenState extends State<ScannerScreen>
           "Optical identification and taxonomy for medicinal flora & herbs.",
           style: TextStyle(
             fontSize: 12,
-            color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+            color: isDark
+                ? JeevanSutraColors.darkTextSecondary
+                : JeevanSutraColors.secondaryText,
           ),
         ),
       ],
@@ -252,7 +303,9 @@ class _ScannerScreenState extends State<ScannerScreen>
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: _flashActive ? Colors.amber : Colors.white.withValues(alpha: 0.2),
+                      color: _flashActive
+                          ? Colors.amber
+                          : Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -263,7 +316,10 @@ class _ScannerScreenState extends State<ScannerScreen>
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(12),
@@ -287,7 +343,11 @@ class _ScannerScreenState extends State<ScannerScreen>
                       color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.sync_rounded, size: 16, color: Colors.white),
+                    child: const Icon(
+                      Icons.sync_rounded,
+                      size: 16,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ],
@@ -310,8 +370,14 @@ class _ScannerScreenState extends State<ScannerScreen>
                       height: 22,
                       decoration: const BoxDecoration(
                         border: Border(
-                          top: BorderSide(color: JeevanSutraColors.freshLeaf, width: 2.5),
-                          left: BorderSide(color: JeevanSutraColors.freshLeaf, width: 2.5),
+                          top: BorderSide(
+                            color: JeevanSutraColors.freshLeaf,
+                            width: 2.5,
+                          ),
+                          left: BorderSide(
+                            color: JeevanSutraColors.freshLeaf,
+                            width: 2.5,
+                          ),
                         ),
                       ),
                     ),
@@ -324,8 +390,14 @@ class _ScannerScreenState extends State<ScannerScreen>
                       height: 22,
                       decoration: const BoxDecoration(
                         border: Border(
-                          top: BorderSide(color: JeevanSutraColors.freshLeaf, width: 2.5),
-                          right: BorderSide(color: JeevanSutraColors.freshLeaf, width: 2.5),
+                          top: BorderSide(
+                            color: JeevanSutraColors.freshLeaf,
+                            width: 2.5,
+                          ),
+                          right: BorderSide(
+                            color: JeevanSutraColors.freshLeaf,
+                            width: 2.5,
+                          ),
                         ),
                       ),
                     ),
@@ -338,8 +410,14 @@ class _ScannerScreenState extends State<ScannerScreen>
                       height: 22,
                       decoration: const BoxDecoration(
                         border: Border(
-                          bottom: BorderSide(color: JeevanSutraColors.freshLeaf, width: 2.5),
-                          left: BorderSide(color: JeevanSutraColors.freshLeaf, width: 2.5),
+                          bottom: BorderSide(
+                            color: JeevanSutraColors.freshLeaf,
+                            width: 2.5,
+                          ),
+                          left: BorderSide(
+                            color: JeevanSutraColors.freshLeaf,
+                            width: 2.5,
+                          ),
                         ),
                       ),
                     ),
@@ -352,8 +430,14 @@ class _ScannerScreenState extends State<ScannerScreen>
                       height: 22,
                       decoration: const BoxDecoration(
                         border: Border(
-                          bottom: BorderSide(color: JeevanSutraColors.freshLeaf, width: 2.5),
-                          right: BorderSide(color: JeevanSutraColors.freshLeaf, width: 2.5),
+                          bottom: BorderSide(
+                            color: JeevanSutraColors.freshLeaf,
+                            width: 2.5,
+                          ),
+                          right: BorderSide(
+                            color: JeevanSutraColors.freshLeaf,
+                            width: 2.5,
+                          ),
                         ),
                       ),
                     ),
@@ -377,7 +461,9 @@ class _ScannerScreenState extends State<ScannerScreen>
                               Icon(
                                 Icons.eco_rounded,
                                 size: 54,
-                                color: JeevanSutraColors.freshLeaf.withValues(alpha: 0.8),
+                                color: JeevanSutraColors.freshLeaf.withValues(
+                                  alpha: 0.8,
+                                ),
                               ),
                               const SizedBox(height: 8),
                               Text(
@@ -405,11 +491,17 @@ class _ScannerScreenState extends State<ScannerScreen>
                             height: 2,
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
-                                colors: [Colors.transparent, JeevanSutraColors.freshLeaf, Colors.transparent],
+                                colors: [
+                                  Colors.transparent,
+                                  JeevanSutraColors.freshLeaf,
+                                  Colors.transparent,
+                                ],
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: JeevanSutraColors.freshLeaf.withValues(alpha: 0.8),
+                                  color: JeevanSutraColors.freshLeaf.withValues(
+                                    alpha: 0.8,
+                                  ),
                                   blurRadius: 10,
                                   spreadRadius: 1,
                                 ),
@@ -433,7 +525,11 @@ class _ScannerScreenState extends State<ScannerScreen>
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.photo_library_rounded, color: Colors.white, size: 24),
+                  icon: const Icon(
+                    Icons.photo_library_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                   tooltip: "Choose from Gallery",
                   onPressed: () => _pickImage(ImageSource.gallery),
                 ),
@@ -448,16 +544,26 @@ class _ScannerScreenState extends State<ScannerScreen>
                       color: JeevanSutraColors.forestGreen,
                       boxShadow: [
                         BoxShadow(
-                          color: JeevanSutraColors.forestGreen.withValues(alpha: 0.5),
+                          color: JeevanSutraColors.forestGreen.withValues(
+                            alpha: 0.5,
+                          ),
                           blurRadius: 12,
                         ),
                       ],
                     ),
-                    child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 28),
+                    child: const Icon(
+                      Icons.camera_alt_rounded,
+                      color: Colors.white,
+                      size: 28,
+                    ),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.science_rounded, color: JeevanSutraColors.freshLeaf, size: 24),
+                  icon: const Icon(
+                    Icons.science_rounded,
+                    color: JeevanSutraColors.freshLeaf,
+                    size: 24,
+                  ),
                   tooltip: "Simulate Sample Scan",
                   onPressed: _simulateSampleScan,
                 ),
@@ -481,10 +587,15 @@ class _ScannerScreenState extends State<ScannerScreen>
               backgroundColor: JeevanSutraColors.forestGreen,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
             icon: const Icon(Icons.photo_camera_rounded, size: 18),
-            label: const Text("Capture Herb", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
+            label: const Text(
+              "Capture Herb",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+            ),
           ),
         ),
         const SizedBox(width: 10),
@@ -492,13 +603,24 @@ class _ScannerScreenState extends State<ScannerScreen>
           child: OutlinedButton.icon(
             onPressed: () => _pickImage(ImageSource.gallery),
             style: OutlinedButton.styleFrom(
-              foregroundColor: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
-              side: BorderSide(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
+              foregroundColor: isDark
+                  ? JeevanSutraColors.darkTextPrimary
+                  : JeevanSutraColors.forestGreen,
+              side: BorderSide(
+                color: isDark
+                    ? JeevanSutraColors.darkBorder
+                    : JeevanSutraColors.subtleBorder,
+              ),
               padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
             icon: const Icon(Icons.image_rounded, size: 18),
-            label: const Text("Upload Photo", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
+            label: const Text(
+              "Upload Photo",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+            ),
           ),
         ),
       ],
@@ -511,7 +633,9 @@ class _ScannerScreenState extends State<ScannerScreen>
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+        color: isDark
+            ? JeevanSutraColors.darkSurface
+            : JeevanSutraColors.pureWhite,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: JeevanSutraColors.freshLeaf),
       ),
@@ -521,12 +645,21 @@ class _ScannerScreenState extends State<ScannerScreen>
           SizedBox(
             width: 16,
             height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2, color: JeevanSutraColors.forestGreen),
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: JeevanSutraColors.forestGreen,
+            ),
           ),
           SizedBox(width: 12),
-          Text(
-            "Analyzing botanical taxonomy and Ayurvedic properties...",
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: JeevanSutraColors.forestGreen),
+          Expanded(
+            child: Text(
+              "Analyzing botanical taxonomy and Ayurvedic properties...",
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: JeevanSutraColors.forestGreen,
+              ),
+            ),
           ),
         ],
       ),
@@ -539,10 +672,14 @@ class _ScannerScreenState extends State<ScannerScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+        color: isDark
+            ? JeevanSutraColors.darkSurface
+            : JeevanSutraColors.pureWhite,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
+          color: isDark
+              ? JeevanSutraColors.darkBorder
+              : JeevanSutraColors.subtleBorder,
         ),
         boxShadow: [
           BoxShadow(
@@ -559,7 +696,10 @@ class _ScannerScreenState extends State<ScannerScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: JeevanSutraColors.freshLeaf.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(10),
@@ -574,13 +714,22 @@ class _ScannerScreenState extends State<ScannerScreen>
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.bookmark_add_rounded, color: JeevanSutraColors.mutedGold),
+                icon: const Icon(
+                  Icons.bookmark_add_rounded,
+                  color: JeevanSutraColors.mutedGold,
+                ),
                 tooltip: "Save to Sanctuary Herbarium",
                 onPressed: () async {
-                  await LocalStorageService.instance.savePlant(result.plantName);
+                  await LocalStorageService.instance.savePlant(
+                    result.plantName,
+                  );
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("${result.plantName} saved to Sanctuary Herbarium!")),
+                      SnackBar(
+                        content: Text(
+                          "${result.plantName} saved to Sanctuary Herbarium!",
+                        ),
+                      ),
                     );
                   }
                 },
@@ -593,7 +742,9 @@ class _ScannerScreenState extends State<ScannerScreen>
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+              color: isDark
+                  ? JeevanSutraColors.darkTextPrimary
+                  : JeevanSutraColors.forestGreen,
             ),
           ),
           Text(
@@ -601,13 +752,23 @@ class _ScannerScreenState extends State<ScannerScreen>
             style: TextStyle(
               fontSize: 13,
               fontStyle: FontStyle.italic,
-              color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+              color: isDark
+                  ? JeevanSutraColors.darkTextSecondary
+                  : JeevanSutraColors.secondaryText,
             ),
           ),
           const Divider(height: 24),
-          _buildResultRow("Ayurvedic Properties", result.identification, isDark),
+          _buildResultRow(
+            "Ayurvedic Properties",
+            result.identification,
+            isDark,
+          ),
           const SizedBox(height: 10),
-          _buildResultRow("Primary Indications", result.traditionalUses, isDark),
+          _buildResultRow(
+            "Primary Indications",
+            result.traditionalUses,
+            isDark,
+          ),
           const SizedBox(height: 10),
           _buildResultRow("Safety & Caution", result.safetySummary, isDark),
           const SizedBox(height: 18),
@@ -618,7 +779,21 @@ class _ScannerScreenState extends State<ScannerScreen>
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => PlantDetailScreen(plant: result.matchedLocalPlant ?? Plant(id: 'scan_result', commonName: result.plantName, scientificName: result.scientificName ?? result.plantName, identification: result.identification, traditionalUses: [result.traditionalUses], scientificEvidence: [result.scientificEvidence], safetySummary: result.safetySummary, precautions: result.precautions)),
+                    builder: (_) => PlantDetailScreen(
+                      plant:
+                          result.matchedLocalPlant ??
+                          Plant(
+                            id: 'scan_result',
+                            commonName: result.plantName,
+                            scientificName:
+                                result.scientificName ?? result.plantName,
+                            identification: result.identification,
+                            traditionalUses: [result.traditionalUses],
+                            scientificEvidence: [result.scientificEvidence],
+                            safetySummary: result.safetySummary,
+                            precautions: result.precautions,
+                          ),
+                    ),
                   ),
                 );
               },
@@ -626,9 +801,14 @@ class _ScannerScreenState extends State<ScannerScreen>
                 backgroundColor: JeevanSutraColors.forestGreen,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
-              icon: const Text("View Full Monograph", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              icon: const Text(
+                "View Full Monograph",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
               label: const Icon(Icons.arrow_forward_rounded, size: 16),
             ),
           ),
@@ -647,7 +827,9 @@ class _ScannerScreenState extends State<ScannerScreen>
             fontSize: 9.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.8,
-            color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+            color: isDark
+                ? JeevanSutraColors.freshLeaf
+                : JeevanSutraColors.forestGreen,
           ),
         ),
         const SizedBox(height: 3),
@@ -656,7 +838,9 @@ class _ScannerScreenState extends State<ScannerScreen>
           style: TextStyle(
             fontSize: 12,
             height: 1.4,
-            color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.mainText,
+            color: isDark
+                ? JeevanSutraColors.darkTextPrimary
+                : JeevanSutraColors.mainText,
           ),
         ),
       ],
@@ -677,7 +861,9 @@ class _ScannerScreenState extends State<ScannerScreen>
             fontSize: 10.5,
             fontWeight: FontWeight.w800,
             letterSpacing: 1.1,
-            color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+            color: isDark
+                ? JeevanSutraColors.freshLeaf
+                : JeevanSutraColors.forestGreen,
           ),
         ),
         const SizedBox(height: 10),
@@ -685,21 +871,29 @@ class _ScannerScreenState extends State<ScannerScreen>
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: _history.take(4).length,
-          separatorBuilder: (_, __) => const SizedBox(height: 8),
+          separatorBuilder: (_, _) => const SizedBox(height: 8),
           itemBuilder: (context, index) {
             final item = _history[index];
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+                color: isDark
+                    ? JeevanSutraColors.darkSurface
+                    : JeevanSutraColors.pureWhite,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
+                  color: isDark
+                      ? JeevanSutraColors.darkBorder
+                      : JeevanSutraColors.subtleBorder,
                 ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.eco_rounded, size: 18, color: JeevanSutraColors.freshLeaf),
+                  const Icon(
+                    Icons.eco_rounded,
+                    size: 18,
+                    color: JeevanSutraColors.freshLeaf,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -707,7 +901,9 @@ class _ScannerScreenState extends State<ScannerScreen>
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.mainText,
+                        color: isDark
+                            ? JeevanSutraColors.darkTextPrimary
+                            : JeevanSutraColors.mainText,
                       ),
                     ),
                   ),
@@ -715,7 +911,9 @@ class _ScannerScreenState extends State<ScannerScreen>
                     item['timestamp']?.toString().split('T').first ?? '',
                     style: TextStyle(
                       fontSize: 10,
-                      color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                      color: isDark
+                          ? JeevanSutraColors.darkTextSecondary
+                          : JeevanSutraColors.secondaryText,
                     ),
                   ),
                 ],

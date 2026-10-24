@@ -28,7 +28,7 @@ class _DietScreenState extends State<DietScreen> {
     final meals = SampleData.mealSuggestions;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text("Personalized Diet"),
         leading: IconButton(

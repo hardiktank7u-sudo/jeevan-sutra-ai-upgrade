@@ -183,7 +183,7 @@ class _KnowledgeLibraryScreenState extends State<KnowledgeLibraryScreen> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text("Knowledge Library"),
         leading: IconButton(

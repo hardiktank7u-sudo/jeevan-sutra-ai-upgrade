@@ -1,5 +1,7 @@
 // Google AI Studio - Jeevan Sutra AI Assistant Screen
 // Botanical conversational AI guide powered by Gemini
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -10,7 +12,13 @@ import '../theme/app_theme.dart';
 import '../widgets/botanical_background.dart';
 
 class AiScreen extends StatefulWidget {
-  const AiScreen({super.key});
+  const AiScreen({super.key, this.responseBuilder});
+
+  final Stream<String> Function({
+    required String prompt,
+    required List<Map<String, dynamic>> conversationHistory,
+  })?
+  responseBuilder;
 
   @override
   State<AiScreen> createState() => _AiScreenState();
@@ -24,6 +32,9 @@ class _AiScreenState extends State<AiScreen> {
   String _dominantPrakriti = 'Pitta-Kapha';
   bool _isGenerating = false;
   bool _historyLoaded = false;
+  StreamSubscription<String>? _responseSubscription;
+  int _conversationGeneration = 0;
+  Future<void> _chatPersistence = Future<void>.value();
 
   final List<_ChatMessage> _messages = [];
 
@@ -42,38 +53,52 @@ class _AiScreenState extends State<AiScreen> {
 
   @override
   void dispose() {
+    _conversationGeneration++;
+    unawaited(_responseSubscription?.cancel());
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
   Future<void> _loadInitialData() async {
-    final name = await LocalStorageService.instance.getProfileName();
-    final dosha = await LocalStorageService.instance.getDosha();
-    if (name.isNotEmpty && name != 'Wellness Explorer') {
-      _userName = name.split(' ').first;
-    }
-    if (dosha != null && dosha.isNotEmpty) {
-      _dominantPrakriti = dosha;
-    }
+    try {
+      final name = await LocalStorageService.instance.getProfileName();
+      final dosha = await LocalStorageService.instance.getDosha();
+      if (name.isNotEmpty && name != 'Wellness Explorer') {
+        _userName = name.split(' ').first;
+      }
+      if (dosha != null && dosha.isNotEmpty) {
+        _dominantPrakriti = dosha;
+      }
 
-    final saved = await LocalStorageService.instance.getChatHistory();
-    if (!mounted) return;
+      final saved = await LocalStorageService.instance.getChatHistory();
+      if (!mounted) return;
 
-    if (saved.isNotEmpty) {
-      setState(() {
-        _messages.addAll(
-          saved.map(
-            (item) => _ChatMessage(
-              text: (item['text'] ?? '').toString(),
-              isUser: item['isUser'] == true,
+      if (saved.isNotEmpty) {
+        setState(() {
+          _messages.addAll(
+            saved.map(
+              (item) => _ChatMessage(
+                text: (item['text'] ?? '').toString(),
+                isUser: item['isUser'] == true,
+              ),
             ),
-          ),
-        );
-        _historyLoaded = true;
-      });
-    } else {
+          );
+          _historyLoaded = true;
+        });
+      } else {
+        setState(() => _historyLoaded = true);
+      }
+    } catch (_) {
+      if (!mounted) return;
       setState(() => _historyLoaded = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Saved conversations could not be loaded on this device.',
+          ),
+        ),
+      );
     }
   }
 
@@ -82,7 +107,21 @@ class _AiScreenState extends State<AiScreen> {
     final toSave = _messages
         .map((m) => {'text': m.text, 'isUser': m.isUser})
         .toList();
-    await LocalStorageService.instance.saveChatHistory(toSave);
+    _chatPersistence = _chatPersistence
+        .then((_) async {
+          await LocalStorageService.instance.saveChatHistory(toSave);
+        })
+        .catchError((Object error) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'This conversation could not be saved on this device.',
+              ),
+            ),
+          );
+        });
+    await _chatPersistence;
   }
 
   void _scrollToBottom() {
@@ -99,76 +138,93 @@ class _AiScreenState extends State<AiScreen> {
 
   Future<void> _sendMessage(String text) async {
     final clean = text.trim();
-    if (clean.isEmpty || _isGenerating) return;
+    if (clean.isEmpty || _isGenerating || !_historyLoaded) return;
+
+    final response = _ChatMessage(text: '', isUser: false);
+    final generation = ++_conversationGeneration;
 
     _controller.clear();
 
     setState(() {
       _messages.add(_ChatMessage(text: clean, isUser: true));
-      _messages.add(_ChatMessage(text: '', isUser: false));
+      _messages.add(response);
       _isGenerating = true;
     });
     _scrollToBottom();
     await _persistChat();
+    if (!mounted || generation != _conversationGeneration) return;
 
     // Prepare conversational history for Gemini
     final conversationHistory = _messages
         .take(_messages.length - 2)
-        .map((m) => {
-              'role': m.isUser ? 'user' : 'model',
-              'text': m.text,
-            })
+        .map((m) => {'role': m.isUser ? 'user' : 'model', 'text': m.text})
         .toList();
 
     try {
-      final stream = GeminiService.instance.streamChatResponse(
+      final responseBuilder =
+          widget.responseBuilder ?? GeminiService.instance.streamChatResponse;
+      final stream = responseBuilder(
         prompt: clean,
         conversationHistory: conversationHistory,
       );
 
-      stream.listen(
+      _responseSubscription = stream.listen(
         (chunk) {
-          if (!mounted) return;
+          if (!mounted || generation != _conversationGeneration) return;
           setState(() {
-            _messages.last.text += chunk;
+            response.text += chunk;
           });
           _scrollToBottom();
         },
         onDone: () {
-          if (!mounted) return;
-          setState(() => _isGenerating = false);
-          _persistChat();
+          if (!mounted || generation != _conversationGeneration) return;
+          setState(() {
+            _isGenerating = false;
+            if (response.text.isEmpty) {
+              response.text = 'The AI guide could not produce a response. Please try again.';
+            }
+          });
+          unawaited(_persistChat());
         },
         onError: (err) {
-          if (!mounted) return;
+          if (!mounted || generation != _conversationGeneration) return;
           setState(() {
-            if (_messages.last.text.isEmpty) {
-              _messages.last.text =
-                  "I apologize, I could not complete the response. Please check your connectivity or try again.";
+            if (response.text.isEmpty) {
+              response.text = GeminiService.describeFailure(err);
             }
             _isGenerating = false;
           });
-          _persistChat();
+          unawaited(_persistChat());
         },
+        cancelOnError: true,
       );
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || generation != _conversationGeneration) return;
       setState(() {
-        _messages.last.text = "Connection issue: $e";
+        response.text = GeminiService.describeFailure(e);
         _isGenerating = false;
       });
-      _persistChat();
+      unawaited(_persistChat());
     }
   }
 
   void _resetChat() {
+    if (!_historyLoaded) return;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: JeevanSutraColors.warmIvory,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        title: const Text("Start New Conversation?", style: TextStyle(fontWeight: FontWeight.bold, color: JeevanSutraColors.forestGreen)),
-        content: const Text("This will clear the current conversation history with your AI Wellness Guide."),
+        title: const Text(
+          "Start New Conversation?",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: JeevanSutraColors.forestGreen,
+          ),
+        ),
+        content: const Text(
+          "This will clear the current conversation history with your AI Wellness Guide.",
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -177,12 +233,32 @@ class _AiScreenState extends State<AiScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
+              _conversationGeneration++;
+              unawaited(_responseSubscription?.cancel());
+              _responseSubscription = null;
               setState(() {
                 _messages.clear();
+                _isGenerating = false;
               });
-              await LocalStorageService.instance.clearChatHistory();
+              _chatPersistence = _chatPersistence
+                  .then((_) async {
+                    await LocalStorageService.instance.clearChatHistory();
+                  })
+                  .catchError((Object error) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Saved conversations could not be cleared on this device.',
+                        ),
+                      ),
+                    );
+                  });
+              await _chatPersistence;
             },
-            style: ElevatedButton.styleFrom(backgroundColor: JeevanSutraColors.forestGreen),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: JeevanSutraColors.forestGreen,
+            ),
             child: const Text("Reset", style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -195,7 +271,7 @@ class _AiScreenState extends State<AiScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: BotanicalBackground(
         child: SafeArea(
           child: Column(
@@ -229,10 +305,14 @@ class _AiScreenState extends State<AiScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
       decoration: BoxDecoration(
-        color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+        color: isDark
+            ? JeevanSutraColors.darkSurface
+            : JeevanSutraColors.pureWhite,
         border: Border(
           bottom: BorderSide(
-            color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
+            color: isDark
+                ? JeevanSutraColors.darkBorder
+                : JeevanSutraColors.subtleBorder,
           ),
         ),
       ),
@@ -247,12 +327,22 @@ class _AiScreenState extends State<AiScreen> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: isDark
-                        ? [JeevanSutraColors.freshLeaf, JeevanSutraColors.forestGreen]
-                        : [JeevanSutraColors.forestGreen, JeevanSutraColors.deepBotanical],
+                        ? [
+                            JeevanSutraColors.freshLeaf,
+                            JeevanSutraColors.forestGreen,
+                          ]
+                        : [
+                            JeevanSutraColors.forestGreen,
+                            JeevanSutraColors.deepBotanical,
+                          ],
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 20),
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 10),
               Column(
@@ -263,7 +353,9 @@ class _AiScreenState extends State<AiScreen> {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+                      color: isDark
+                          ? JeevanSutraColors.darkTextPrimary
+                          : JeevanSutraColors.forestGreen,
                     ),
                   ),
                   Row(
@@ -281,7 +373,9 @@ class _AiScreenState extends State<AiScreen> {
                         "Namaste, $_userName • Prakriti: $_dominantPrakriti",
                         style: TextStyle(
                           fontSize: 10.5,
-                          color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                          color: isDark
+                              ? JeevanSutraColors.darkTextSecondary
+                              : JeevanSutraColors.secondaryText,
                         ),
                       ),
                     ],
@@ -294,7 +388,9 @@ class _AiScreenState extends State<AiScreen> {
             icon: const Icon(Icons.refresh_rounded, size: 20),
             tooltip: "Reset Conversation",
             onPressed: _resetChat,
-            color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+            color: isDark
+                ? JeevanSutraColors.darkTextSecondary
+                : JeevanSutraColors.secondaryText,
           ),
         ],
       ),
@@ -313,7 +409,9 @@ class _AiScreenState extends State<AiScreen> {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: isDark ? JeevanSutraColors.darkSurfaceElevated : JeevanSutraColors.softSage,
+              color: isDark
+                  ? JeevanSutraColors.darkSurfaceElevated
+                  : JeevanSutraColors.softSage,
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -328,7 +426,9 @@ class _AiScreenState extends State<AiScreen> {
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.bold,
-              color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+              color: isDark
+                  ? JeevanSutraColors.darkTextPrimary
+                  : JeevanSutraColors.forestGreen,
             ),
           ),
           const SizedBox(height: 6),
@@ -337,7 +437,9 @@ class _AiScreenState extends State<AiScreen> {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+              color: isDark
+                  ? JeevanSutraColors.darkTextSecondary
+                  : JeevanSutraColors.secondaryText,
               height: 1.4,
             ),
           ),
@@ -350,7 +452,9 @@ class _AiScreenState extends State<AiScreen> {
                 fontSize: 10,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1.0,
-                color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                color: isDark
+                    ? JeevanSutraColors.freshLeaf
+                    : JeevanSutraColors.forestGreen,
               ),
             ),
           ),
@@ -363,17 +467,28 @@ class _AiScreenState extends State<AiScreen> {
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
-                    color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+                    color: isDark
+                        ? JeevanSutraColors.darkSurface
+                        : JeevanSutraColors.pureWhite,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
+                      color: isDark
+                          ? JeevanSutraColors.darkBorder
+                          : JeevanSutraColors.subtleBorder,
                     ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.arrow_forward_rounded, size: 16, color: JeevanSutraColors.freshLeaf),
+                      const Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 16,
+                        color: JeevanSutraColors.freshLeaf,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -381,7 +496,9 @@ class _AiScreenState extends State<AiScreen> {
                           style: TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w500,
-                            color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.mainText,
+                            color: isDark
+                                ? JeevanSutraColors.darkTextPrimary
+                                : JeevanSutraColors.mainText,
                           ),
                         ),
                       ),
@@ -408,7 +525,10 @@ class _AiScreenState extends State<AiScreen> {
           children: [
             Flexible(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: const BoxDecoration(
                   color: JeevanSutraColors.forestGreen,
                   borderRadius: BorderRadius.only(
@@ -435,7 +555,11 @@ class _AiScreenState extends State<AiScreen> {
                 color: JeevanSutraColors.forestGreen,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.person_rounded, size: 16, color: Colors.white),
+              child: const Icon(
+                Icons.person_rounded,
+                size: 16,
+                color: Colors.white,
+              ),
             ),
           ],
         ),
@@ -453,24 +577,34 @@ class _AiScreenState extends State<AiScreen> {
             width: 28,
             height: 28,
             decoration: BoxDecoration(
-              color: isDark ? JeevanSutraColors.darkSurfaceElevated : JeevanSutraColors.softSage,
+              color: isDark
+                  ? JeevanSutraColors.darkSurfaceElevated
+                  : JeevanSutraColors.softSage,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.auto_awesome_rounded, size: 16, color: JeevanSutraColors.forestGreen),
+            child: const Icon(
+              Icons.auto_awesome_rounded,
+              size: 16,
+              color: JeevanSutraColors.forestGreen,
+            ),
           ),
           const SizedBox(width: 8),
           Flexible(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+                color: isDark
+                    ? JeevanSutraColors.darkSurface
+                    : JeevanSutraColors.pureWhite,
                 borderRadius: const BorderRadius.only(
                   topRight: Radius.circular(20),
                   bottomLeft: Radius.circular(20),
                   bottomRight: Radius.circular(20),
                 ),
                 border: Border.all(
-                  color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
+                  color: isDark
+                      ? JeevanSutraColors.darkBorder
+                      : JeevanSutraColors.subtleBorder,
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -492,12 +626,19 @@ class _AiScreenState extends State<AiScreen> {
                           SizedBox(
                             width: 12,
                             height: 12,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: JeevanSutraColors.forestGreen),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: JeevanSutraColors.forestGreen,
+                            ),
                           ),
                           SizedBox(width: 8),
                           Text(
                             "Consulting Vedic knowledge...",
-                            style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: JeevanSutraColors.secondaryText),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontStyle: FontStyle.italic,
+                              color: JeevanSutraColors.secondaryText,
+                            ),
                           ),
                         ],
                       ),
@@ -505,16 +646,32 @@ class _AiScreenState extends State<AiScreen> {
                   else ...[
                     MarkdownBody(
                       data: msg.text,
-                      styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                        p: TextStyle(
-                          fontSize: 13,
-                          height: 1.5,
-                          color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.mainText,
-                        ),
-                        h1: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: JeevanSutraColors.forestGreen),
-                        h2: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: JeevanSutraColors.forestGreen),
-                        listBullet: TextStyle(color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen),
-                      ),
+                      styleSheet:
+                          MarkdownStyleSheet.fromTheme(Theme.of(context))
+                              .copyWith(
+                                p: TextStyle(
+                                  fontSize: 13,
+                                  height: 1.5,
+                                  color: isDark
+                                      ? JeevanSutraColors.darkTextPrimary
+                                      : JeevanSutraColors.mainText,
+                                ),
+                                h1: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: JeevanSutraColors.forestGreen,
+                                ),
+                                h2: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: JeevanSutraColors.forestGreen,
+                                ),
+                                listBullet: TextStyle(
+                                  color: isDark
+                                      ? JeevanSutraColors.freshLeaf
+                                      : JeevanSutraColors.forestGreen,
+                                ),
+                              ),
                     ),
                     const SizedBox(height: 6),
                     Align(
@@ -523,10 +680,17 @@ class _AiScreenState extends State<AiScreen> {
                         onTap: () {
                           Clipboard.setData(ClipboardData(text: msg.text));
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Copied to clipboard"), duration: Duration(seconds: 1)),
+                            const SnackBar(
+                              content: Text("Copied to clipboard"),
+                              duration: Duration(seconds: 1),
+                            ),
                           );
                         },
-                        child: const Icon(Icons.copy_rounded, size: 14, color: JeevanSutraColors.secondaryText),
+                        child: const Icon(
+                          Icons.copy_rounded,
+                          size: 14,
+                          color: JeevanSutraColors.secondaryText,
+                        ),
                       ),
                     ),
                   ],
@@ -545,10 +709,14 @@ class _AiScreenState extends State<AiScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       decoration: BoxDecoration(
-        color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+        color: isDark
+            ? JeevanSutraColors.darkSurface
+            : JeevanSutraColors.pureWhite,
         border: Border(
           top: BorderSide(
-            color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
+            color: isDark
+                ? JeevanSutraColors.darkBorder
+                : JeevanSutraColors.subtleBorder,
           ),
         ),
       ),
@@ -558,10 +726,14 @@ class _AiScreenState extends State<AiScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
-                color: isDark ? JeevanSutraColors.darkCanvas : JeevanSutraColors.warmIvory,
+                color: isDark
+                    ? JeevanSutraColors.darkCanvas
+                    : JeevanSutraColors.warmIvory,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
+                  color: isDark
+                      ? JeevanSutraColors.darkBorder
+                      : JeevanSutraColors.subtleBorder,
                 ),
               ),
               child: TextField(
@@ -569,13 +741,17 @@ class _AiScreenState extends State<AiScreen> {
                 onSubmitted: _sendMessage,
                 style: TextStyle(
                   fontSize: 12.5,
-                  color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.mainText,
+                  color: isDark
+                      ? JeevanSutraColors.darkTextPrimary
+                      : JeevanSutraColors.mainText,
                 ),
                 decoration: InputDecoration(
                   hintText: "Ask Jeevan Sutra AI guide...",
                   hintStyle: TextStyle(
                     fontSize: 12,
-                    color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                    color: isDark
+                        ? JeevanSutraColors.darkTextSecondary
+                        : JeevanSutraColors.secondaryText,
                   ),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -600,7 +776,11 @@ class _AiScreenState extends State<AiScreen> {
                   ),
                 ],
               ),
-              child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+              child: const Icon(
+                Icons.send_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
             ),
           ),
         ],

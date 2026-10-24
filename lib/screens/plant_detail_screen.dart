@@ -28,7 +28,7 @@ class PlantDetailScreen extends StatefulWidget {
       scientificEvidence: [mp.scientificEvidence],
       safetySummary: mp.precautions,
       precautions: [mp.precautions],
-      knownCompounds: [mp.rasa + ' (rasa) • ' + mp.virya + ' (virya) • ' + mp.vipaka + ' (vipaka)'],
+      knownCompounds: ['${mp.rasa} (rasa) â€¢ ${mp.virya} (virya) â€¢ ${mp.vipaka} (vipaka)'],
     );
     return PlantDetailScreen(key: key, plant: plant);
   }
@@ -105,7 +105,7 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: BotanicalBackground(
         child: SafeArea(
           bottom: false,
@@ -163,15 +163,15 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
           ),
           Text(
             plant.commonName,
-            style: const TextStyle(
-              color: AppTheme.textPrimary,
+            style: TextStyle(
+              color: context.detailText,
               fontSize: 17,
               fontWeight: FontWeight.w800,
             ),
           ),
           _CircleIconButton(
             icon: _saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-            iconColor: _saved ? AppTheme.gold : AppTheme.textSecondary,
+            iconColor: _saved ? AppTheme.gold : context.detailSecondaryText,
             onTap: _loadingSavedState ? null : _toggleSaved,
           ),
         ],
@@ -338,13 +338,13 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
 
   Widget _buildCustomTabBar() {
     return Container(
-      color: AppTheme.bgDark,
+      color: Theme.of(context).scaffoldBackgroundColor,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Container(
         height: 44,
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: AppTheme.bgCard,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(22),
           border: Border.all(color: AppTheme.borderGold),
         ),
@@ -364,7 +364,7 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
           indicatorSize: TabBarIndicatorSize.tab,
           dividerColor: Colors.transparent,
           labelColor: const Color(0xFF141004),
-          unselectedLabelColor: AppTheme.textSecondary,
+          unselectedLabelColor: context.detailSecondaryText,
           labelStyle: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w800,
@@ -408,8 +408,8 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
             icon: Icons.visibility_rounded,
             child: Text(
               plant.identification,
-              style: const TextStyle(
-                color: AppTheme.textSecondary,
+              style: TextStyle(
+                color: context.detailSecondaryText,
                 fontSize: 13,
                 height: 1.5,
               ),
@@ -441,8 +441,8 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
               const Spacer(),
               Text(
                 'Status: ${_formatStatus(plant.reviewStatus)}',
-                style: const TextStyle(
-                  color: AppTheme.textMuted,
+                style: TextStyle(
+                  color: context.detailSecondaryText,
                   fontSize: 11.5,
                   fontWeight: FontWeight.w600,
                 ),
@@ -470,9 +470,9 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (plant.scientificEvidence.isEmpty)
-                const Text(
+                Text(
                   'Scientific research data is being verified for this record.',
-                  style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                  style: TextStyle(color: context.detailSecondaryText, fontSize: 13),
                 )
               else
                 ...plant.scientificEvidence.map(
@@ -489,8 +489,8 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
                         Expanded(
                           child: Text(
                             item,
-                            style: const TextStyle(
-                              color: AppTheme.textSecondary,
+                            style: TextStyle(
+                              color: context.detailSecondaryText,
                               fontSize: 13,
                               height: 1.45,
                             ),
@@ -515,7 +515,7 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppTheme.bgSurfaceElevated,
+                    color: context.detailInsetSurface,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: AppTheme.borderGoldSubtle),
                   ),
@@ -550,9 +550,9 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (plant.traditionalUses.isEmpty)
-                const Text(
+                Text(
                   'Traditional applications are being curated from classical texts.',
-                  style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                  style: TextStyle(color: context.detailSecondaryText, fontSize: 13),
                 )
               else
                 ...plant.traditionalUses.map(
@@ -561,7 +561,7 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: AppTheme.bgSurfaceElevated,
+                        color: context.detailInsetSurface,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: AppTheme.borderGoldSubtle),
                       ),
@@ -573,8 +573,8 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
                           Expanded(
                             child: Text(
                               use,
-                              style: const TextStyle(
-                                color: AppTheme.textPrimary,
+                              style: TextStyle(
+                                color: context.detailText,
                                 fontSize: 13,
                                 height: 1.45,
                               ),
@@ -607,8 +607,8 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
                       Expanded(
                         child: Text(
                           ref,
-                          style: const TextStyle(
-                            color: AppTheme.textSecondary,
+                          style: TextStyle(
+                            color: context.detailSecondaryText,
                             fontSize: 12,
                             height: 1.4,
                           ),
@@ -671,8 +671,8 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
               if (plant.safetySummary.isNotEmpty) ...[
                 Text(
                   plant.safetySummary,
-                  style: const TextStyle(
-                    color: AppTheme.textSecondary,
+                  style: TextStyle(
+                    color: context.detailSecondaryText,
                     fontSize: 13,
                     height: 1.5,
                   ),
@@ -692,8 +692,8 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
                         Expanded(
                           child: Text(
                             precaution,
-                            style: const TextStyle(
-                              color: AppTheme.textSecondary,
+                            style: TextStyle(
+                              color: context.detailSecondaryText,
                               fontSize: 12.5,
                               height: 1.4,
                             ),
@@ -704,9 +704,9 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
                   ),
                 )
               else
-                const Text(
+                Text(
                   'No adverse interaction precautions currently recorded.',
-                  style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                  style: TextStyle(color: context.detailSecondaryText, fontSize: 13),
                 ),
             ],
           ),
@@ -721,7 +721,7 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       decoration: BoxDecoration(
-        color: AppTheme.bgDark.withValues(alpha: 0.95),
+        color: Theme.of(context).scaffoldBackgroundColor,
         border: Border(
           top: BorderSide(
             color: AppTheme.borderGold.withValues(alpha: 0.2),
@@ -735,7 +735,7 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
         child: DecoratedBox(
           decoration: BoxDecoration(
             gradient: _saved ? null : AppTheme.goldGradient,
-            color: _saved ? AppTheme.bgCard : null,
+            color: _saved ? Theme.of(context).cardColor : null,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: _saved ? AppTheme.borderGold : Colors.transparent,
@@ -784,22 +784,22 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.bgCard,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppTheme.borderGoldSubtle),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded, color: AppTheme.gold, size: 20),
-          SizedBox(width: 12),
+          const Icon(Icons.info_outline_rounded, color: AppTheme.gold, size: 20),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               'Jeevan Sutra provides educational Indian Knowledge information and does not replace medical advice or prescription.',
               style: TextStyle(
                 fontSize: 11.5,
                 height: 1.45,
-                color: AppTheme.textMuted,
+                color: context.detailSecondaryText,
               ),
             ),
           ),
@@ -870,18 +870,18 @@ class _TabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
 class _CircleIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onTap;
-  final Color iconColor;
+  final Color? iconColor;
 
   const _CircleIconButton({
     required this.icon,
     required this.onTap,
-    this.iconColor = AppTheme.textPrimary,
+    this.iconColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppTheme.bgCard,
+      color: Theme.of(context).cardColor,
       shape: const CircleBorder(),
       child: InkWell(
         onTap: onTap,
@@ -893,7 +893,7 @@ class _CircleIconButton extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: AppTheme.borderGold),
           ),
-          child: Icon(icon, color: iconColor, size: 20),
+          child: Icon(icon, color: iconColor ?? context.detailText, size: 20),
         ),
       ),
     );
@@ -943,7 +943,7 @@ class _DarkCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppTheme.bgCard,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: AppTheme.borderGold),
         boxShadow: [
@@ -973,10 +973,10 @@ class _DarkCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
-                    color: AppTheme.textPrimary,
+                    color: context.detailText,
                   ),
                 ),
               ),
@@ -1012,9 +1012,9 @@ class _DarkInfoRow extends StatelessWidget {
             flex: 4,
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: AppTheme.textMuted,
+                color: context.detailSecondaryText,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1028,7 +1028,7 @@ class _DarkInfoRow extends StatelessWidget {
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 fontStyle: italic ? FontStyle.italic : FontStyle.normal,
-                color: AppTheme.textPrimary,
+                color: context.detailText,
               ),
             ),
           ),
@@ -1055,10 +1055,10 @@ class _DarkListPills extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: AppTheme.textMuted,
+            color: context.detailSecondaryText,
           ),
         ),
         const SizedBox(height: 8),
@@ -1069,7 +1069,7 @@ class _DarkListPills extends StatelessWidget {
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: AppTheme.bgSurfaceElevated,
+                color: context.detailInsetSurface,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppTheme.borderGoldSubtle),
               ),
@@ -1087,4 +1087,19 @@ class _DarkListPills extends StatelessWidget {
       ],
     );
   }
+}
+
+// Resolve legacy detail colors through the active botanical theme.
+extension _PlantDetailColors on BuildContext {
+  Color get detailText => Theme.of(this).colorScheme.onSurface;
+
+  Color get detailSecondaryText =>
+      Theme.of(this).brightness == Brightness.dark
+          ? JeevanSutraColors.darkTextSecondary
+          : JeevanSutraColors.secondaryText;
+
+  Color get detailInsetSurface =>
+      Theme.of(this).brightness == Brightness.dark
+          ? JeevanSutraColors.darkSurfaceElevated
+          : JeevanSutraColors.softSage;
 }

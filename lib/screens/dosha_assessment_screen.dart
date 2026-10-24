@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:jeevan_sutra/theme/jeevan_sutra_ui_theme.dart';
 
+import '../services/local_storage_service.dart';
 import '../widgets/botanical_background.dart';
 
 class DoshaAssessmentScreen extends StatefulWidget {
@@ -103,8 +104,10 @@ class _DoshaAssessmentScreenState extends State<DoshaAssessmentScreen> {
     });
   }
 
-  void _saveResult() {
+  Future<void> _saveResult() async {
     final dominant = _calculateDominantPrakriti();
+    await LocalStorageService.instance.saveDosha(dominant);
+    if (!mounted) return;
     if (widget.onDoshaDetermined != null) {
       widget.onDoshaDetermined!(dominant);
     }
@@ -126,8 +129,9 @@ class _DoshaAssessmentScreenState extends State<DoshaAssessmentScreen> {
     if (kaphaCount > vataCount && kaphaCount > pittaCount) return "Kapha";
     if (pittaCount == vataCount && pittaCount > kaphaCount) return "Pitta-Vata";
     if (vataCount == kaphaCount && vataCount > pittaCount) return "Vata-Kapha";
-    if (pittaCount == kaphaCount && pittaCount > vataCount)
+    if (pittaCount == kaphaCount && pittaCount > vataCount) {
       return "Pitta-Kapha";
+    }
     return "Tridoshic Balanced";
   }
 

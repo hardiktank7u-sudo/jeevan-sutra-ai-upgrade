@@ -158,7 +158,7 @@ class _YogaScreenState extends State<YogaScreen> {
     final sessions = SampleData.yogaSessions;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text("Yoga & Meditation"),
         leading: IconButton(

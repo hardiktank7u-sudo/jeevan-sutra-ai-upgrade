@@ -127,7 +127,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text("Settings"),
         leading: IconButton(
@@ -347,19 +347,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text(
-              "Circadian Rhythm Reminders",
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          Material(
+            color: Colors.transparent,
+            child: SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                "Circadian Rhythm Reminders",
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+              subtitle: const Text(
+                "Receive gentle alerts for Brahma Muhurta, Midday Agni, and Night Nidra",
+                style: TextStyle(fontSize: 11),
+              ),
+              value: _notifications,
+              activeThumbColor: JeevanSutraColors.forestGreen,
+              onChanged: (val) => setState(() => _notifications = val),
             ),
-            subtitle: const Text(
-              "Receive gentle alerts for Brahma Muhurta, Midday Agni, and Night Nidra",
-              style: TextStyle(fontSize: 11),
-            ),
-            value: _notifications,
-            activeThumbColor: JeevanSutraColors.forestGreen,
-            onChanged: (val) => setState(() => _notifications = val),
           ),
         ],
       ),

@@ -420,7 +420,7 @@ class JeevanSutraDrawer extends StatelessWidget {
     );
   }
 
-  static bool Brightometer(BuildContext context) {
+  static bool isDarkTheme(BuildContext context) {
     return Theme.of(context).brightness == Brightness.dark;
   }
 

@@ -26,6 +26,10 @@ class BotanicalBackground extends StatelessWidget {
 
     return Stack(
       children: [
+        // Opaque routes need their own canvas beneath the translucent artwork.
+        Positioned.fill(
+          child: ColoredBox(color: Theme.of(context).scaffoldBackgroundColor),
+        ),
         // Subtle ambient radial gradients
         Positioned(
           top: -120,

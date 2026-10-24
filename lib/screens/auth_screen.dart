@@ -415,10 +415,11 @@ class _AuthScreenState extends State<AuthScreen>
                                               : null,
                                         ),
                                         onSelected: (selected) {
-                                          if (selected)
+                                          if (selected) {
                                             setState(
                                               () => _selectedPrakriti = dosha,
                                             );
+                                          }
                                         },
                                       );
                                     }).toList(),

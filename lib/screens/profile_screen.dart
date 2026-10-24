@@ -13,7 +13,14 @@ import 'dosha_assessment_screen.dart';
 import 'settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final int refreshToken;
+  final VoidCallback? onProfileChanged;
+
+  const ProfileScreen({
+    super.key,
+    this.refreshToken = 0,
+    this.onProfileChanged,
+  });
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -26,7 +33,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _ageGroup = '25–34';
   String _dominantPrakriti = 'Pitta-Kapha';
   String _dietaryPreference = 'Sattvic & Plant-Forward';
-  final String _preferredLanguage = 'English';
   int _streak = 7;
 
   int _savedWisdomCount = 0;
@@ -45,6 +51,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     'Kapha-Pitta',
     'Vata-Kapha',
     'Tridoshic (Balanced)',
+    'Vata',
+    'Pitta',
+    'Kapha',
+    'Kapha-Vata',
+    'Tridoshic Balanced',
   ];
 
   final List<String> _ageGroups = ['18–24', '25–34', '35–44', '45–54', '55+'];
@@ -55,8 +66,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     'Vegan & Ayurvedic',
     'Non-Vegetarian with Sattvic Principles',
   ];
-
-  final List<String> _languages = ['English', 'Hindi', 'Sanskrit'];
 
   final List<Map<String, dynamic>> _dinacharyaHabits = [
     {'id': 'ushapan', 'title': 'Ushapan (Warm Water)', 'time': 'Dawn'},
@@ -82,6 +91,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _loadProfileData();
+  }
+
+  @override
+  void didUpdateWidget(covariant ProfileScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.refreshToken != widget.refreshToken) {
+      _loadProfileData();
+    }
   }
 
   @override
@@ -121,6 +138,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await LocalStorageService.instance.saveProfileName(newName);
       await LocalStorageService.instance.saveDosha(_dominantPrakriti);
       if (!mounted) return;
+      widget.onProfileChanged?.call();
       setState(() {
         _name = newName;
         _savedSuccess = true;
@@ -235,7 +253,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _generateAiHealthReport() async {
-    showDialog<void>(
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final loadingDialog = DialogRoute<void>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
@@ -261,6 +280,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
+    navigator.push(loadingDialog);
 
     final prompt =
         '''
@@ -293,10 +313,11 @@ Format with clean, inspiring Markdown with bullet points.
       },
       onDone: () {
         if (!mounted) return;
-        Navigator.of(
-          context,
-          rootNavigator: true,
-        ).pop(); // dismiss loading dialog
+        if (!loadingDialog.isCurrent) {
+          if (loadingDialog.isActive) navigator.removeRoute(loadingDialog);
+          return;
+        }
+        navigator.pop();
 
         showModalBottomSheet(
           context: context,
@@ -398,11 +419,12 @@ Format with clean, inspiring Markdown with bullet points.
       },
       onError: (err) {
         if (!mounted) return;
-        Navigator.of(context, rootNavigator: true).pop();
+        if (loadingDialog.isActive) navigator.removeRoute(loadingDialog);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Error generating report: $err")),
         );
       },
+      cancelOnError: true,
     );
   }
 
@@ -411,9 +433,9 @@ Format with clean, inspiring Markdown with bullet points.
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (_loading) {
-      return const Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Center(
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: const Center(
           child: CircularProgressIndicator(
             color: JeevanSutraColors.forestGreen,
           ),
@@ -422,7 +444,7 @@ Format with clean, inspiring Markdown with bullet points.
     }
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: BotanicalBackground(
         child: SafeArea(
           child: SingleChildScrollView(
@@ -794,7 +816,9 @@ Format with clean, inspiring Markdown with bullet points.
                 dropdownColor: isDark
                     ? JeevanSutraColors.darkSurface
                     : JeevanSutraColors.pureWhite,
-                items: _prakritiOptions
+                // Keep quiz results and older saved values selectable instead
+                // of passing a value absent from the dropdown's items.
+                items: <String>{..._prakritiOptions, _dominantPrakriti}
                     .map(
                       (p) => DropdownMenuItem(
                         value: p,
@@ -929,8 +953,9 @@ Format with clean, inspiring Markdown with bullet points.
                       builder: (_) => DoshaAssessmentScreen(
                         onBack: () => Navigator.pop(context),
                         onDoshaDetermined: (newDosha) {
+                          if (!mounted) return;
                           setState(() => _dominantPrakriti = newDosha);
-                          LocalStorageService.instance.saveDosha(newDosha);
+                          widget.onProfileChanged?.call();
                         },
                       ),
                     ),
@@ -1300,58 +1325,61 @@ Format with clean, inspiring Markdown with bullet points.
               : JeevanSutraColors.subtleBorder,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "System & Preferences",
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: isDark
-                  ? JeevanSutraColors.darkTextPrimary
-                  : JeevanSutraColors.forestGreen,
+      child: Material(
+        type: MaterialType.transparency,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "System & Preferences",
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: isDark
+                    ? JeevanSutraColors.darkTextPrimary
+                    : JeevanSutraColors.forestGreen,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(
-              Icons.settings_rounded,
-              color: JeevanSutraColors.forestGreen,
+            const SizedBox(height: 8),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(
+                Icons.settings_rounded,
+                color: JeevanSutraColors.forestGreen,
+              ),
+              title: const Text(
+                "App Settings & Notifications",
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              ),
             ),
-            title: const Text(
-              "App Settings & Notifications",
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+            const Divider(height: 1),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(
+                Icons.info_outline_rounded,
+                color: JeevanSutraColors.forestGreen,
+              ),
+              title: const Text(
+                "About Jeevan Sutra",
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+              subtitle: const Text(
+                "Version 1.0.0+1 (Living Intelligence)",
+                style: TextStyle(fontSize: 10.5),
+              ),
+              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AboutScreen()),
+              ),
             ),
-            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            ),
-          ),
-          const Divider(height: 1),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(
-              Icons.info_outline_rounded,
-              color: JeevanSutraColors.forestGreen,
-            ),
-            title: const Text(
-              "About Jeevan Sutra",
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-            ),
-            subtitle: const Text(
-              "Version 1.0.0+1 (Living Intelligence)",
-              style: TextStyle(fontSize: 10.5),
-            ),
-            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AboutScreen()),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
