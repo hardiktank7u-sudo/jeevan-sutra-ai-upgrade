@@ -57,9 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateTo(Widget screen) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => screen),
-    );
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
   }
 
   int get _completedCount => _routines.where((r) => r.isCompleted).length;
@@ -129,19 +127,17 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(
-                    Icons.wb_sunny_rounded,
-                    size: 14,
-                    color: JeevanSutraColors.mutedGold,
-                  ),
+                  const Icon(Icons.wb_sunny_rounded, size: 14, color: JeevanSutraColors.mutedGold),
                   const SizedBox(width: 6),
-                  Text(
-                    "VASANTA RITU • MIDDAY ALIGNMENT",
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.1,
-                      color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                  Flexible(
+                    child: Text(
+                      "VASANTA RITU • MIDDAY ALIGNMENT",
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.1,
+                        color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                      ),
                     ),
                   ),
                 ],
@@ -195,10 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
-          width: 1,
-        ),
+        border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
@@ -242,7 +235,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text(
                           "Agni Consistency Streak",
@@ -252,7 +248,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
                           ),
                         ),
-                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
@@ -329,70 +324,85 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: weekDays.map((day) {
-                      final isCompleted = day['completed'] == true;
-                      final isToday = day['isToday'] == true;
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final dayWidth = constraints.maxWidth / weekDays.length;
+                      final indicatorSize = dayWidth < 28 ? dayWidth : 28.0;
 
-                      return Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            day['label'] as String,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Container(
-                            width: 28,
-                            height: 28,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isCompleted
-                                  ? (isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen)
-                                  : (isDark ? JeevanSutraColors.darkBorder : const Color(0xFFE4E8E0)),
-                              border: isToday && !isCompleted
-                                  ? Border.all(
-                                      color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
-                                      width: 1.5,
-                                    )
-                                  : null,
-                            ),
-                            child: Center(
-                              child: isCompleted
-                                  ? Icon(
-                                      Icons.check_rounded,
-                                      size: 16,
-                                      color: isDark ? JeevanSutraColors.darkCanvas : Colors.white,
-                                    )
-                                  : (isToday
-                                      ? Text(
-                                          '$_completedCount',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
+                      return Row(
+                        children: weekDays.map((day) {
+                          final isCompleted = day['completed'] == true;
+                          final isToday = day['isToday'] == true;
+
+                          return SizedBox(
+                            width: dayWidth,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  day['label'] as String,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark
+                                        ? JeevanSutraColors.darkTextSecondary
+                                        : JeevanSutraColors.secondaryText,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Container(
+                                  width: indicatorSize,
+                                  height: indicatorSize,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: isCompleted
+                                        ? (isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen)
+                                        : (isDark ? JeevanSutraColors.darkBorder : const Color(0xFFE4E8E0)),
+                                    border: isToday && !isCompleted
+                                        ? Border.all(
                                             color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
-                                          ),
-                                        )
-                                      : null),
+                                            width: 1.5,
+                                          )
+                                        : null,
+                                  ),
+                                  child: Center(
+                                    child: isCompleted
+                                        ? Icon(
+                                            Icons.check_rounded,
+                                            size: indicatorSize < 24 ? 14 : 16,
+                                            color: isDark ? JeevanSutraColors.darkCanvas : Colors.white,
+                                          )
+                                        : (isToday
+                                              ? Text(
+                                                  '$_completedCount',
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: isDark
+                                                        ? JeevanSutraColors.freshLeaf
+                                                        : JeevanSutraColors.forestGreen,
+                                                  ),
+                                                )
+                                              : null),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  isToday ? 'Today' : '',
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  style: TextStyle(
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            isToday ? 'Today' : '',
-                            style: TextStyle(
-                              fontSize: 8,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
-                            ),
-                          ),
-                        ],
+                          );
+                        }).toList(),
                       );
-                    }).toList(),
+                    },
                   ),
                 ),
                 Container(
@@ -457,7 +467,10 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -475,71 +488,59 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
               Text(
                 "Prakriti Sync • $_dominantPrakriti",
-                style: const TextStyle(
-                  color: Color(0xFFBACBC1),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: const TextStyle(color: Color(0xFFBACBC1), fontSize: 11, fontWeight: FontWeight.w500),
               ),
             ],
           ),
           const SizedBox(height: 12),
           const Text(
             '"Small mindful choices create lasting balance."',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-              height: 1.3,
-            ),
+            style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold, height: 1.3),
           ),
           const SizedBox(height: 6),
           const Text(
             "Midday sun awakens maximum digestive fire (Jatharagni). Nourish your body with sattvic whole grains and light grounding herbs.",
-            style: TextStyle(
-              color: Color(0xFFBACBC1),
-              fontSize: 11.5,
-              height: 1.4,
-            ),
+            style: TextStyle(color: Color(0xFFBACBC1), fontSize: 11.5, height: 1.4),
           ),
           const SizedBox(height: 16),
-          Row(
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              ElevatedButton.icon(
+              ElevatedButton(
                 onPressed: () => _navigateTo(const ExploreScreen()),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: JeevanSutraColors.freshLeaf,
                   foregroundColor: JeevanSutraColors.deepBotanical,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                icon: const Text(
-                  "Explore Today's Guidance",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        "Explore Today's Guidance",
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.arrow_forward_rounded, size: 16),
+                  ],
                 ),
-                label: const Icon(Icons.arrow_forward_rounded, size: 16),
               ),
-              const SizedBox(width: 10),
               OutlinedButton(
                 onPressed: () => _navigateTo(const DinacharyaScreen()),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.white,
                   side: BorderSide(color: Colors.white.withValues(alpha: 0.25)),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                child: const Text(
-                  "Timeline",
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                ),
+                child: const Text("Timeline", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
               ),
             ],
           ),
@@ -554,8 +555,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text(
               "DAILY WELLNESS SNAPSHOT",
@@ -597,9 +601,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 decoration: BoxDecoration(
                   color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
-                  ),
+                  border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -607,12 +609,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          "Hydration",
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                        Expanded(
+                          child: Text(
+                            "Hydration",
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                            ),
                           ),
                         ),
                         const Icon(Icons.water_drop_rounded, size: 16, color: Color(0xFF0284C7)),
@@ -622,25 +626,31 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: '$_hydrationCups',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+                        Expanded(
+                          child: RichText(
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: '$_hydrationCups',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+                                  ),
                                 ),
-                              ),
-                              TextSpan(
-                                text: '/8 cups',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                                TextSpan(
+                                  text: '/8 cups',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: isDark
+                                        ? JeevanSutraColors.darkTextSecondary
+                                        : JeevanSutraColors.secondaryText,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                         Row(
@@ -714,9 +724,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 decoration: BoxDecoration(
                   color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
-                  ),
+                  border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -724,12 +732,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          "Mindfulness",
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                        Expanded(
+                          child: Text(
+                            "Mindfulness",
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                            ),
                           ),
                         ),
                         const Icon(Icons.auto_awesome_rounded, size: 16, color: JeevanSutraColors.freshLeaf),
@@ -739,25 +749,31 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: '$_mindfulnessMinutes',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+                        Expanded(
+                          child: RichText(
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: '$_mindfulnessMinutes',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+                                  ),
                                 ),
-                              ),
-                              TextSpan(
-                                text: ' mins',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                                TextSpan(
+                                  text: ' mins',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: isDark
+                                        ? JeevanSutraColors.darkTextSecondary
+                                        : JeevanSutraColors.secondaryText,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                         InkWell(
@@ -784,11 +800,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 4),
                     const Text(
                       "Goal: 20 mins/day",
-                      style: TextStyle(
-                        fontSize: 9.5,
-                        color: JeevanSutraColors.freshLeaf,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: TextStyle(fontSize: 9.5, color: JeevanSutraColors.freshLeaf, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
@@ -815,22 +827,21 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
-        ),
+        border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                  ),
                 ),
               ),
               Icon(icon, size: 16, color: iconColor),
@@ -862,11 +873,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 4),
           Text(
             caption,
-            style: TextStyle(
-              fontSize: 9.5,
-              fontWeight: FontWeight.w600,
-              color: captionColor,
-            ),
+            style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: captionColor),
           ),
         ],
       ),
@@ -884,18 +891,13 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           color: isDark ? JeevanSutraColors.darkSurfaceElevated : JeevanSutraColors.softSage,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
-          ),
+          border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: JeevanSutraColors.forestGreen,
-                borderRadius: BorderRadius.circular(14),
-              ),
+              decoration: BoxDecoration(color: JeevanSutraColors.forestGreen, borderRadius: BorderRadius.circular(14)),
               child: const Icon(Icons.air_rounded, color: Colors.white, size: 22),
             ),
             const SizedBox(width: 14),
@@ -903,7 +905,10 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 2,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       const Text(
                         "PRANAYAMA STUDIO",
@@ -914,7 +919,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: JeevanSutraColors.forestGreen,
                         ),
                       ),
-                      const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                         decoration: BoxDecoration(
@@ -953,10 +957,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             Container(
               padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: JeevanSutraColors.freshLeaf,
-                borderRadius: BorderRadius.circular(10),
-              ),
+              decoration: BoxDecoration(color: JeevanSutraColors.freshLeaf, borderRadius: BorderRadius.circular(10)),
               child: const Icon(Icons.arrow_forward_rounded, size: 14, color: JeevanSutraColors.deepBotanical),
             ),
           ],
@@ -976,15 +977,16 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
-        ),
+        border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1128,8 +1130,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text(
               "EXPLORE PILLARS OF WELLNESS",
@@ -1150,69 +1155,72 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 1.6,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-          ),
-          itemCount: pillars.length,
-          itemBuilder: (context, index) {
-            final p = pillars[index];
-            return InkWell(
-              onTap: () => _navigateTo(p['screen'] as Widget),
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final cardWidth = (constraints.maxWidth - 10) / 2;
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: cardWidth / 112,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+              ),
+              itemCount: pillars.length,
+              itemBuilder: (context, index) {
+                final p = pillars[index];
+                return InkWell(
+                  onTap: () => _navigateTo(p['screen'] as Widget),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: isDark ? JeevanSutraColors.darkCanvas : JeevanSutraColors.softSage,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        p['icon'] as IconData,
-                        size: 18,
-                        color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
-                      ),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
                     ),
-                    Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(
-                          child: Text(
-                            p['title'] as String,
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.mainText,
-                            ),
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: isDark ? JeevanSutraColors.darkCanvas : JeevanSutraColors.softSage,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            p['icon'] as IconData,
+                            size: 18,
+                            color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
                           ),
                         ),
-                        Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          size: 11,
-                          color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                p['title'] as String,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.mainText,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 11,
+                              color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             );
           },
         ),
@@ -1229,8 +1237,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text(
               "RECOMMENDED FOR $_dominantPrakriti",
@@ -1266,9 +1277,7 @@ class _HomeScreenState extends State<HomeScreen> {
             decoration: BoxDecoration(
               color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
-              ),
+              border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
             ),
             child: Row(
               children: [
@@ -1276,7 +1285,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      Wrap(
+                        spacing: 4,
+                        runSpacing: 2,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Text(
                             article.category,
@@ -1346,9 +1358,7 @@ class _HomeScreenState extends State<HomeScreen> {
             decoration: BoxDecoration(
               color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
-              ),
+              border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
             ),
             child: Row(
               children: [
@@ -1356,7 +1366,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      Wrap(
+                        spacing: 4,
+                        runSpacing: 2,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           const Text(
                             "HERBAL ADAPTOGEN",

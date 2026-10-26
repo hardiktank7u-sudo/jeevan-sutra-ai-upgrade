@@ -1,4 +1,4 @@
-﻿// Flutter Implementation of 'Affirmation of the Day'
+// Flutter Implementation of 'Affirmation of the Day'
 // Rotating Ayurvedic & Vedic Wisdom with Sanskrit text and contemplation guidance
 import 'package:flutter/material.dart';
 
@@ -29,8 +29,7 @@ class AffirmationCard extends StatefulWidget {
   State<AffirmationCard> createState() => _AffirmationCardState();
 }
 
-class _AffirmationCardState extends State<AffirmationCard>
-    with SingleTickerProviderStateMixin {
+class _AffirmationCardState extends State<AffirmationCard> with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
   bool _isBookmarked = false;
   late AnimationController _fadeController;
@@ -41,8 +40,7 @@ class _AffirmationCardState extends State<AffirmationCard>
       shloka: "हितभुक् मितभुक् शाकभुक् च",
       translation: "Eat what is wholesome, eat in moderation, and eat plant-derived foods in seasonal rhythm.",
       source: "Charaka Samhita, Sutrasthana",
-      context:
-          "Ahara (Dietary Wisdom) for sustained Agni and cellular vitality",
+      context: "Ahara (Dietary Wisdom) for sustained Agni and cellular vitality",
       theme: "Nourishment & Agni",
     ),
     AffirmationItem(
@@ -54,7 +52,8 @@ class _AffirmationCardState extends State<AffirmationCard>
     ),
     AffirmationItem(
       shloka: "शरीरमाद्यं खलु धर्मसाधनम्",
-      translation: "The physical body is verily the foremost instrument for realizing higher purpose and righteous living.",
+      translation:
+          "The physical body is verily the foremost instrument for realizing higher purpose and righteous living.",
       source: "Kalidasa, Kumarasambhava 5.33",
       context: "Honor the vessel of your consciousness with daily Dinacharya",
       theme: "Sacred Embodiment",
@@ -71,14 +70,8 @@ class _AffirmationCardState extends State<AffirmationCard>
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 350),
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeInOut,
-    );
+    _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 350));
+    _fadeAnimation = CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut);
     _fadeController.forward();
   }
 
@@ -108,18 +101,10 @@ class _AffirmationCardState extends State<AffirmationCard>
         color: isDark ? JeevanSutraColors.darkSurface : const Color(0xFFFBF9F2),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isDark
-              ? JeevanSutraColors.darkBorder
-              : JeevanSutraColors.mutedGold.withValues(alpha: 0.35),
+          color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.mutedGold.withValues(alpha: 0.35),
           width: 1.2,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 16, offset: const Offset(0, 4))],
       ),
       padding: const EdgeInsets.all(20),
       child: FadeTransition(
@@ -128,37 +113,36 @@ class _AffirmationCardState extends State<AffirmationCard>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Top Meta Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? JeevanSutraColors.darkSurfaceElevated
-                            : JeevanSutraColors.softSage,
+                        color: isDark ? JeevanSutraColors.darkSurfaceElevated : JeevanSutraColors.softSage,
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
                         Icons.auto_awesome_rounded,
                         size: 14,
-                        color: isDark
-                            ? JeevanSutraColors.mutedGold
-                            : JeevanSutraColors.forestGreen,
+                        color: isDark ? JeevanSutraColors.mutedGold : JeevanSutraColors.forestGreen,
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      "AFFIRMATION OF THE DAY",
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
-                        color: isDark
-                            ? JeevanSutraColors.mutedGold
-                            : JeevanSutraColors.forestGreen,
+                    Expanded(
+                      child: Text(
+                        "AFFIRMATION OF THE DAY",
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.2,
+                          color: isDark ? JeevanSutraColors.mutedGold : JeevanSutraColors.forestGreen,
+                        ),
                       ),
                     ),
                   ],
@@ -167,13 +151,9 @@ class _AffirmationCardState extends State<AffirmationCard>
                   children: [
                     IconButton(
                       icon: Icon(
-                        _isBookmarked
-                            ? Icons.bookmark_rounded
-                            : Icons.bookmark_border_rounded,
+                        _isBookmarked ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
                         size: 18,
-                        color: _isBookmarked
-                            ? JeevanSutraColors.mutedGold
-                            : (isDark ? Colors.white54 : Colors.black45),
+                        color: _isBookmarked ? JeevanSutraColors.mutedGold : (isDark ? Colors.white54 : Colors.black45),
                       ),
                       visualDensity: VisualDensity.compact,
                       tooltip: "Bookmark wisdom",
@@ -200,11 +180,7 @@ class _AffirmationCardState extends State<AffirmationCard>
               decoration: BoxDecoration(
                 color: isDark ? JeevanSutraColors.darkCanvas : Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isDark
-                      ? JeevanSutraColors.darkBorder
-                      : const Color(0xFFE8E5DA),
-                ),
+                border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : const Color(0xFFE8E5DA)),
               ),
               child: Text(
                 item.shloka,
@@ -213,9 +189,7 @@ class _AffirmationCardState extends State<AffirmationCard>
                   fontWeight: FontWeight.w600,
                   height: 1.4,
                   fontStyle: FontStyle.italic,
-                  color: isDark
-                      ? JeevanSutraColors.darkTextPrimary
-                      : JeevanSutraColors.forestGreen,
+                  color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
                 ),
               ),
             ),
@@ -228,25 +202,24 @@ class _AffirmationCardState extends State<AffirmationCard>
                 fontSize: 13,
                 height: 1.45,
                 fontWeight: FontWeight.w500,
-                color: isDark
-                    ? JeevanSutraColors.darkTextPrimary
-                    : JeevanSutraColors.mainText,
+                color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.mainText,
               ),
             ),
             const SizedBox(height: 10),
 
             // Source Attribution
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Text(
                   item.source,
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? JeevanSutraColors.mutedGold
-                        : const Color(0xFF9A7B38),
+                    color: isDark ? JeevanSutraColors.mutedGold : const Color(0xFF9A7B38),
                   ),
                 ),
                 Text(
@@ -254,9 +227,7 @@ class _AffirmationCardState extends State<AffirmationCard>
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w500,
-                    color: isDark
-                        ? JeevanSutraColors.darkTextSecondary
-                        : JeevanSutraColors.secondaryText,
+                    color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
                   ),
                 ),
               ],

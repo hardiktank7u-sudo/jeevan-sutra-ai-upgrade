@@ -53,10 +53,7 @@ class _RitucharyaScreenState extends State<RitucharyaScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text("Seasonal Wellness"),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.pop(context),
-        ),
+        leading: IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: () => Navigator.pop(context)),
       ),
       body: BotanicalBackground(
         child: SafeArea(
@@ -148,11 +145,7 @@ class _RitucharyaScreenState extends State<RitucharyaScreen> {
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: ChoiceChip(
-              avatar: Icon(
-                icon,
-                size: 16,
-                color: isSelected ? Colors.white : JeevanSutraColors.forestGreen,
-              ),
+              avatar: Icon(icon, size: 16, color: isSelected ? Colors.white : JeevanSutraColors.forestGreen),
               label: Text("${season.name} (${season.sanskritName})"),
               labelStyle: TextStyle(
                 fontSize: 11,
@@ -209,8 +202,11 @@ class _RitucharyaScreenState extends State<RitucharyaScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -229,15 +225,18 @@ class _RitucharyaScreenState extends State<RitucharyaScreen> {
                 ),
               ),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.wb_sunny_rounded, size: 14, color: JeevanSutraColors.mutedGold),
                   const SizedBox(width: 4),
-                  Text(
-                    season.dominantElement,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: JeevanSutraColors.mutedGold,
+                  Flexible(
+                    child: Text(
+                      season.dominantElement,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: JeevanSutraColors.mutedGold,
+                      ),
                     ),
                   ),
                 ],
@@ -247,29 +246,14 @@ class _RitucharyaScreenState extends State<RitucharyaScreen> {
           const SizedBox(height: 12),
           Text(
             "${season.name} Ritu",
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
           ),
           Text(
             season.sanskritName,
-            style: const TextStyle(
-              fontSize: 13,
-              fontStyle: FontStyle.italic,
-              color: Color(0xFFBACBC1),
-            ),
+            style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: Color(0xFFBACBC1)),
           ),
           const SizedBox(height: 10),
-          Text(
-            season.doshaState,
-            style: const TextStyle(
-              fontSize: 12,
-              height: 1.4,
-              color: Color(0xFFBACBC1),
-            ),
-          ),
+          Text(season.doshaState, style: const TextStyle(fontSize: 12, height: 1.4, color: Color(0xFFBACBC1))),
         ],
       ),
     );
@@ -283,9 +267,7 @@ class _RitucharyaScreenState extends State<RitucharyaScreen> {
       decoration: BoxDecoration(
         color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
-        ),
+        border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -294,12 +276,14 @@ class _RitucharyaScreenState extends State<RitucharyaScreen> {
             children: [
               const Icon(Icons.balance_rounded, size: 18, color: JeevanSutraColors.forestGreen),
               const SizedBox(width: 8),
-              Text(
-                "Seasonal Dosha Dynamics",
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+              Expanded(
+                child: Text(
+                  "Seasonal Dosha Dynamics",
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+                  ),
                 ),
               ),
             ],
@@ -326,9 +310,7 @@ class _RitucharyaScreenState extends State<RitucharyaScreen> {
       decoration: BoxDecoration(
         color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
-        ),
+        border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,12 +319,14 @@ class _RitucharyaScreenState extends State<RitucharyaScreen> {
             children: [
               const Icon(Icons.restaurant_menu_rounded, size: 18, color: JeevanSutraColors.forestGreen),
               const SizedBox(width: 8),
-              Text(
-                "Seasonal Ahara (Dietary Prescriptions)",
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+              Expanded(
+                child: Text(
+                  "Seasonal Ahara (Dietary Prescriptions)",
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+                  ),
                 ),
               ),
             ],
@@ -402,9 +386,7 @@ class _RitucharyaScreenState extends State<RitucharyaScreen> {
       decoration: BoxDecoration(
         color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
-        ),
+        border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -413,12 +395,14 @@ class _RitucharyaScreenState extends State<RitucharyaScreen> {
             children: [
               const Icon(Icons.self_improvement_rounded, size: 18, color: JeevanSutraColors.forestGreen),
               const SizedBox(width: 8),
-              Text(
-                "Seasonal Vihara (Lifestyle & Regimen)",
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+              Expanded(
+                child: Text(
+                  "Seasonal Vihara (Lifestyle & Regimen)",
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+                  ),
                 ),
               ),
             ],
@@ -445,9 +429,7 @@ class _RitucharyaScreenState extends State<RitucharyaScreen> {
       decoration: BoxDecoration(
         color: isDark ? JeevanSutraColors.darkSurfaceElevated : JeevanSutraColors.softSage,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
-        ),
+        border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -456,12 +438,14 @@ class _RitucharyaScreenState extends State<RitucharyaScreen> {
             children: [
               const Icon(Icons.eco_rounded, size: 18, color: JeevanSutraColors.forestGreen),
               const SizedBox(width: 8),
-              Text(
-                "Seasonal Botanical Allies",
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+              Expanded(
+                child: Text(
+                  "Seasonal Botanical Allies",
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+                  ),
                 ),
               ),
             ],
