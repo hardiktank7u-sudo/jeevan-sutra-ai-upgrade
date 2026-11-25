@@ -9,9 +9,6 @@
     <!-- Notifications — Android 13+ requires runtime permission -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Exact alarms — required for scheduled wellness reminders -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <application
         android:label="jeevan_sutra"
         android:name="${applicationName}"

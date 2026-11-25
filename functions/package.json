@@ -1,24 +1,14 @@
 {
-  "name": "functions",
-  "description": "Cloud Functions for Firebase",
+  "name": "jeevan-sutra-gemini-worker",
+  "private": true,
+  "type": "module",
   "scripts": {
-    "serve": "firebase emulators:start --only functions",
-    "shell": "firebase functions:shell",
-    "start": "npm run shell",
-    "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
-  },
-  "engines": {
-    "node": "24"
-  },
-  "main": "index.js",
-  "dependencies": {
-    "@google/genai": "^2.22.0",
-    "firebase-admin": "^13.6.0",
-    "firebase-functions": "^7.0.0"
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node --test test/*.test.js",
+    "smoke": "node scripts/smoke-test.js"
   },
   "devDependencies": {
-    "firebase-functions-test": "^3.4.1"
-  },
-  "private": true
+    "wrangler": "^4.36.0"
+  }
 }

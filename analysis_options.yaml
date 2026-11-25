@@ -12,6 +12,7 @@ include: package:flutter_lints/flutter.yaml
 analyzer:
   exclude:
     - build/**
+    - backups/**
     - milestone_fix_backup/**
     - android/**
     - ios/**

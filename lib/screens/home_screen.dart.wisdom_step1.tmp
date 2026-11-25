@@ -1,0 +1,644 @@
+import 'package:flutter/material.dart';
+
+import '../services/local_storage_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/premium_background.dart';
+import 'explore_screen.dart';
+import 'scanner_screen.dart';
+import 'ai_screen.dart';
+import 'knowledge_library_screen.dart';
+import 'diet_screen.dart';
+import 'dinacharya_screen.dart';
+import 'ritucharya_screen.dart';
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
+  String _userName = 'Hardik';
+  int _wisdomIndex = 0;
+  late final AnimationController _wisdomFadeController;
+  late final Animation<double> _wisdomFade;
+
+  static const List<Map<String, String>> _wisdomItems = [
+    {
+      'verse': 'हितभुक् मितभुक् शाकभुक् च',
+      'meaning': 'Choose wholesome food, eat in moderation, and value nourishing plant foods.',
+      'source': 'Ayurvedic dietary wisdom',
+    },
+    {
+      'verse': 'समदोषः समाग्निश्च समधातुमलक्रियः। प्रसन्नात्मेन्द्रियमनाः स्वस्थ इत्यभिधीयते॥',
+      'meaning': 'Classical Ayurveda describes well-being as balance in the body, senses, and mind.',
+      'source': 'Sushruta Samhita 15.41',
+    },
+    {
+      'verse': 'शरीरमाद्यं खलु धर्मसाधनम्',
+      'meaning': 'Care for the body that helps you pursue meaningful goals and daily duties.',
+      'source': 'Kalidasa, Kumarasambhava 5.33',
+    },
+    {
+      'verse': 'युक्तस्वप्नावबोधस्य योगो भवति दुःखहा',
+      'meaning': 'A balanced routine of sleep and wakefulness supports a steadier life.',
+      'source': 'Bhagavad Gita 6.17',
+    },
+  ];
+
+  void _showNextWisdom() {
+    if (_wisdomFadeController.isAnimating) return;
+    _wisdomFadeController.reverse().then((_) {
+      if (!mounted) return;
+      setState(() {
+        _wisdomIndex = (_wisdomIndex + 1) % _wisdomItems.length;
+      });
+      _wisdomFadeController.forward();
+    });
+  }
+  String _userName = 'Hardik';
+
+  @override
+  void initState() {
+    super.initState();
+    _wisdomFadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _wisdomFade = CurvedAnimation(
+      parent: _wisdomFadeController,
+      curve: Curves.easeInOut,
+    );
+    _wisdomFadeController.forward();
+    _loadUser();
+  }
+
+  @override
+  void dispose() {
+    _wisdomFadeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadUser() async {
+    final name = await LocalStorageService.instance.getProfileName();
+    if (!mounted) return;
+    if (name.isNotEmpty && name != 'Wellness Explorer') {
+      setState(() => _userName = name.split(' ').first);
+    }
+  }
+
+  void _openScreen(Widget screen) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => screen),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: PremiumBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 100),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTopGreeting(),
+                const SizedBox(height: 20),
+                _buildHeadline(),
+                const SizedBox(height: 22),
+                _buildHeroBanner(),
+                const SizedBox(height: 24),
+                _buildFeatureGrid(),
+                const SizedBox(height: 24),
+                _buildWisdomCard(),
+                const SizedBox(height: 24),
+                _buildPathwaysSection(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopGreeting() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Good morning, $_userName',
+              style: const TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ],
+        ),
+        Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFF10281D),
+                shape: BoxShape.circle,
+                border: Border.all(color: AppTheme.borderGold),
+              ),
+              child: const Icon(
+                Icons.notifications_none_rounded,
+                color: AppTheme.goldLight,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              width: 40,
+              height: 40,
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppTheme.gold,
+                  width: 1.5,
+                ),
+                gradient: AppTheme.goldGradient,
+              ),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Color(0xFF0F261B),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    _userName.isNotEmpty ? _userName.substring(0, 1).toUpperCase() : 'H',
+                    style: const TextStyle(
+                      color: AppTheme.goldBright,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeadline() {
+    return RichText(
+      text: const TextSpan(
+        style: TextStyle(
+          fontSize: 29,
+          fontWeight: FontWeight.w800,
+          color: AppTheme.textPrimary,
+          height: 1.22,
+          letterSpacing: -0.5,
+        ),
+        children: [
+          TextSpan(text: 'Your wellness,\nrooted in '),
+          TextSpan(
+            text: 'wisdom.',
+            style: TextStyle(
+              color: AppTheme.goldLight,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroBanner() {
+    return Container(
+      width: double.infinity,
+      height: 215,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(
+          color: AppTheme.gold.withValues(alpha: 0.4),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF183B2A),
+            Color(0xFF10281C),
+            Color(0xFF08160F),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Stack(
+        children: [
+          // Background Botanical Glow & Watermark
+          Positioned(
+            right: -20,
+            bottom: -20,
+            child: Icon(
+              Icons.spa_rounded,
+              size: 190,
+              color: AppTheme.emerald.withValues(alpha: 0.08),
+            ),
+          ),
+
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.gold.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: AppTheme.gold.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: const Text(
+                        'AYURVEDA',
+                        style: TextStyle(
+                          color: AppTheme.goldBright,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Nature’s Healing\nPower',
+                      style: TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 25,
+                        fontWeight: FontWeight.w800,
+                        height: 1.15,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Discover time-tested herbs\nfor a healthier you.',
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 12.5,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: GestureDetector(
+                    onTap: () => _openScreen(const ExploreScreen()),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.goldGradient,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.gold.withValues(alpha: 0.4),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.arrow_forward_rounded,
+                        color: Color(0xFF141004),
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureGrid() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _FeatureCard(
+                icon: Icons.eco_rounded,
+                title: 'Medicinal Plants',
+                subtitle: 'Explore nature\'s healing power',
+                onTap: () => _openScreen(const KnowledgeLibraryScreen()),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: _FeatureCard(
+                icon: Icons.soup_kitchen_rounded,
+                title: 'Ayurveda',
+                subtitle: 'Ancient wisdom, modern life',
+                onTap: () => _openScreen(const DietScreen()),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: _FeatureCard(
+                icon: Icons.spa_rounded,
+                title: 'AI Assistant',
+                subtitle: 'Your personal wellness guide',
+                onTap: () => _openScreen(const AiScreen()),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: _FeatureCard(
+                icon: Icons.camera_alt_rounded,
+                title: 'AI Scanner',
+                subtitle: 'Identify herbs with vision',
+                onTap: () => _openScreen(const ScannerScreen()),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWisdomCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F261B),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.borderGold),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.format_quote_rounded, color: AppTheme.gold, size: 28),
+              SizedBox(width: 8),
+              Text(
+                'Today’s Wisdom',
+                style: TextStyle(
+                  color: AppTheme.goldLight,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.6,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            '“A healthy mind lives in a healthy body.”',
+            style: TextStyle(
+              color: AppTheme.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              fontStyle: FontStyle.italic,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              '— Charaka Samhita',
+              style: TextStyle(
+                color: AppTheme.textMuted,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPathwaysSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Explore Pathways',
+          style: TextStyle(
+            color: AppTheme.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 14),
+        _PathwayTile(
+          icon: Icons.wb_sunny_rounded,
+          title: 'Daily Dinacharya',
+          subtitle: 'Create a balanced daily rhythm',
+          onTap: () => _openScreen(const DinacharyaScreen()),
+        ),
+        const SizedBox(height: 10),
+        _PathwayTile(
+          icon: Icons.cloud_outlined,
+          title: 'Ritucharya (Seasonal Living)',
+          subtitle: 'Adapt your diet across the 6 Indian seasons',
+          onTap: () => _openScreen(const RitucharyaScreen()),
+        ),
+      ],
+    );
+  }
+}
+
+class _FeatureCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _FeatureCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(22),
+      child: Container(
+        height: 142,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F261B),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: AppTheme.borderGold,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: const Color(0xFF163828),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTheme.gold.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Icon(
+                icon,
+                color: AppTheme.goldLight,
+                size: 20,
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppTheme.textMuted,
+                    fontSize: 10,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PathwayTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _PathwayTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F261B),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppTheme.borderGold),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF163828),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: AppTheme.goldLight, size: 20),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: AppTheme.textMuted, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: AppTheme.gold,
+              size: 13,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

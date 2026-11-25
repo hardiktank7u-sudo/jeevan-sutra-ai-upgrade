@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="utf-8"?>
+<policyDefinitions revision="1.1" schemaVersion="1.0">
+	<policyNamespaces>
+		<target prefix="Cursor" namespace="Cursor.Policies.Cursor" />
+	</policyNamespaces>
+	<resources minRequiredRevision="1.0" />
+	<supportedOn>
+		<definitions>
+			<definition name="Supported_1_67" displayName="$(string.Supported_1_67)" />
+			<definition name="Supported_1_96" displayName="$(string.Supported_1_96)" />
+			<definition name="Supported_1_99" displayName="$(string.Supported_1_99)" />
+		</definitions>
+	</supportedOn>
+	<categories>
+		<category displayName="$(string.Application)" name="Application" />
+		<category displayName="$(string.Category_cursorAuthConfigurationTitle)" name="cursorAuthConfigurationTitle"><parentCategory ref="Application" /></category>
+		<category displayName="$(string.Category_cursorAirlockConfigurationTitle)" name="cursorAirlockConfigurationTitle"><parentCategory ref="Application" /></category>
+		<category displayName="$(string.Category_cursorManagedDeploymentConfigurationTitle)" name="cursorManagedDeploymentConfigurationTitle"><parentCategory ref="Application" /></category>
+		<category displayName="$(string.Category_cursorOrbitAirlockConfigurationTitle)" name="cursorOrbitAirlockConfigurationTitle"><parentCategory ref="Application" /></category>
+		<category displayName="$(string.Category_securityConfigurationTitle)" name="securityConfigurationTitle"><parentCategory ref="Application" /></category>
+		<category displayName="$(string.Category_agentHostConfigurationTitle)" name="agentHostConfigurationTitle"><parentCategory ref="Application" /></category>
+		<category displayName="$(string.Category_extensionsConfigurationTitle)" name="extensionsConfigurationTitle"><parentCategory ref="Application" /></category>
+		<category displayName="$(string.Category_updateConfigurationTitle)" name="updateConfigurationTitle"><parentCategory ref="Application" /></category>
+		<category displayName="$(string.Category_cursorGeneralConfigurationTitle)" name="cursorGeneralConfigurationTitle"><parentCategory ref="Application" /></category>
+		<category displayName="$(string.Category_remote)" name="remote"><parentCategory ref="Application" /></category>
+		<category displayName="$(string.Category_extensionsConfigurationTitle)" name="extensionsConfigurationTitle"><parentCategory ref="Application" /></category>
+		<category displayName="$(string.Category_extensionConfigurationPolicy)" name="extensionConfigurationPolicy"><parentCategory ref="Application" /></category>
+	</categories>
+	<policies>
+		<policy name="AllowedTeamId" class="Both" displayName="$(string.AllowedTeamId)" explainText="$(string.AllowedTeamId_cursor_allowedTeamId)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.AllowedTeamId)">
+			<parentCategory ref="cursorAuthConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<text id="AllowedTeamId" valueName="AllowedTeamId" required="true" />
+			</elements>
+		</policy>
+		<policy name="SignInEnforcement" class="Both" displayName="$(string.SignInEnforcement)" explainText="$(string.SignInEnforcement_cursor_signInEnforcement)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.SignInEnforcement)">
+			<parentCategory ref="cursorAuthConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<boolean id="SignInEnforcement" valueName="SignInEnforcement">
+			<trueValue><decimal value="1" /></trueValue><falseValue><decimal value="0" /></falseValue>
+		</boolean>
+			</elements>
+		</policy>
+		<policy name="AllowedOrganizationIds" class="Both" displayName="$(string.AllowedOrganizationIds)" explainText="$(string.AllowedOrganizationIds_cursor_allowedOrganizationIds)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.AllowedOrganizationIds)">
+			<parentCategory ref="cursorAuthConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<text id="AllowedOrganizationIds" valueName="AllowedOrganizationIds" required="true" />
+			</elements>
+		</policy>
+		<policy name="AllowedTeamIds" class="Both" displayName="$(string.AllowedTeamIds)" explainText="$(string.AllowedTeamIds_cursor_allowedTeamIds)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.AllowedTeamIds)">
+			<parentCategory ref="cursorAuthConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<text id="AllowedTeamIds" valueName="AllowedTeamIds" required="true" />
+			</elements>
+		</policy>
+		<policy name="AllowedLoginEmails" class="Both" displayName="$(string.AllowedLoginEmails)" explainText="$(string.AllowedLoginEmails_cursor_allowedLoginEmails)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.AllowedLoginEmails)">
+			<parentCategory ref="cursorAuthConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<text id="AllowedLoginEmails" valueName="AllowedLoginEmails" required="true" />
+			</elements>
+		</policy>
+		<policy name="AllowedLoginDomains" class="Both" displayName="$(string.AllowedLoginDomains)" explainText="$(string.AllowedLoginDomains_cursor_allowedLoginDomains)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.AllowedLoginDomains)">
+			<parentCategory ref="cursorAuthConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<text id="AllowedLoginDomains" valueName="AllowedLoginDomains" required="true" />
+			</elements>
+		</policy>
+		<policy name="DeploymentId" class="Both" displayName="$(string.DeploymentId)" explainText="$(string.DeploymentId_cursor_deploymentId)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.DeploymentId)">
+			<parentCategory ref="cursorAuthConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<decimal id="DeploymentId" valueName="DeploymentId" />
+			</elements>
+		</policy>
+		<policy name="AirlockContainerName" class="Both" displayName="$(string.AirlockContainerName)" explainText="$(string.AirlockContainerName_cursor_airlock_containerName)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.AirlockContainerName)">
+			<parentCategory ref="cursorAirlockConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<text id="AirlockContainerName" valueName="AirlockContainerName" required="true" />
+			</elements>
+		</policy>
+		<policy name="AirlockDefaultWorkspace" class="Both" displayName="$(string.AirlockDefaultWorkspace)" explainText="$(string.AirlockDefaultWorkspace_cursor_airlock_defaultWorkspace)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.AirlockDefaultWorkspace)">
+			<parentCategory ref="cursorAirlockConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<text id="AirlockDefaultWorkspace" valueName="AirlockDefaultWorkspace" required="true" />
+			</elements>
+		</policy>
+		<policy name="AirlockContainerUser" class="Both" displayName="$(string.AirlockContainerUser)" explainText="$(string.AirlockContainerUser_cursor_airlock_containerUser)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.AirlockContainerUser)">
+			<parentCategory ref="cursorAirlockConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<text id="AirlockContainerUser" valueName="AirlockContainerUser" required="true" />
+			</elements>
+		</policy>
+		<policy name="AirlockEngine" class="Both" displayName="$(string.AirlockEngine)" explainText="$(string.AirlockEngine_cursor_airlock_engine)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.AirlockEngine)">
+			<parentCategory ref="cursorAirlockConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<text id="AirlockEngine" valueName="AirlockEngine" required="true" />
+			</elements>
+		</policy>
+		<policy name="AirlockCreateContainerHook" class="Both" displayName="$(string.AirlockCreateContainerHook)" explainText="$(string.AirlockCreateContainerHook_cursor_airlock_createContainerHook)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.AirlockCreateContainerHook)">
+			<parentCategory ref="cursorAirlockConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<text id="AirlockCreateContainerHook" valueName="AirlockCreateContainerHook" required="true" />
+			</elements>
+		</policy>
+		<policy name="AirlockStartContainerHook" class="Both" displayName="$(string.AirlockStartContainerHook)" explainText="$(string.AirlockStartContainerHook_cursor_airlock_startContainerHook)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.AirlockStartContainerHook)">
+			<parentCategory ref="cursorAirlockConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<text id="AirlockStartContainerHook" valueName="AirlockStartContainerHook" required="true" />
+			</elements>
+		</policy>
+		<policy name="AirlockPreAttachContainerHook" class="Both" displayName="$(string.AirlockPreAttachContainerHook)" explainText="$(string.AirlockPreAttachContainerHook_cursor_airlock_preAttachContainerHook)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.AirlockPreAttachContainerHook)">
+			<parentCategory ref="cursorAirlockConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<text id="AirlockPreAttachContainerHook" valueName="AirlockPreAttachContainerHook" required="true" />
+			</elements>
+		</policy>
+		<policy name="AirlockRestartContainerHook" class="Both" displayName="$(string.AirlockRestartContainerHook)" explainText="$(string.AirlockRestartContainerHook_cursor_airlock_restartContainerHook)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.AirlockRestartContainerHook)">
+			<parentCategory ref="cursorAirlockConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<text id="AirlockRestartContainerHook" valueName="AirlockRestartContainerHook" required="true" />
+			</elements>
+		</policy>
+		<policy name="AirlockContainerStatusHook" class="Both" displayName="$(string.AirlockContainerStatusHook)" explainText="$(string.AirlockContainerStatusHook_cursor_airlock_containerStatusHook)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.AirlockContainerStatusHook)">
+			<parentCategory ref="cursorAirlockConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<text id="AirlockContainerStatusHook" valueName="AirlockContainerStatusHook" required="true" />
+			</elements>
+		</policy>
+		<policy name="AirlockHookTimeoutSeconds" class="Both" displayName="$(string.AirlockHookTimeoutSeconds)" explainText="$(string.AirlockHookTimeoutSeconds_cursor_airlock_hookTimeoutSeconds)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.AirlockHookTimeoutSeconds)">
+			<parentCategory ref="cursorAirlockConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<decimal id="AirlockHookTimeoutSeconds" valueName="AirlockHookTimeoutSeconds" />
+			</elements>
+		</policy>
+		<policy name="DeploymentBackendUrl" class="Both" displayName="$(string.DeploymentBackendUrl)" explainText="$(string.DeploymentBackendUrl_cursor_deployment_backendUrl)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.DeploymentBackendUrl)">
+			<parentCategory ref="cursorManagedDeploymentConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<text id="DeploymentBackendUrl" valueName="DeploymentBackendUrl" required="true" />
+			</elements>
+		</policy>
+		<policy name="DeploymentWebsiteUrl" class="Both" displayName="$(string.DeploymentWebsiteUrl)" explainText="$(string.DeploymentWebsiteUrl_cursor_deployment_websiteUrl)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.DeploymentWebsiteUrl)">
+			<parentCategory ref="cursorManagedDeploymentConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<text id="DeploymentWebsiteUrl" valueName="DeploymentWebsiteUrl" required="true" />
+			</elements>
+		</policy>
+		<policy name="AirlockRequired" class="Both" displayName="$(string.AirlockRequired)" explainText="$(string.AirlockRequired_cursor_airlock_required)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.AirlockRequired)">
+			<parentCategory ref="cursorOrbitAirlockConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<boolean id="AirlockRequired" valueName="AirlockRequired">
+			<trueValue><decimal value="1" /></trueValue><falseValue><decimal value="0" /></falseValue>
+		</boolean>
+			</elements>
+		</policy>
+		<policy name="WorkspaceTrustEnabled" class="Both" displayName="$(string.WorkspaceTrustEnabled)" explainText="$(string.WorkspaceTrustEnabled_workspace_trust_description)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.WorkspaceTrustEnabled)">
+			<parentCategory ref="securityConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<boolean id="WorkspaceTrustEnabled" valueName="WorkspaceTrustEnabled">
+			<trueValue><decimal value="1" /></trueValue><falseValue><decimal value="0" /></falseValue>
+		</boolean>
+			</elements>
+		</policy>
+		<policy name="AgentHostUpdateMode" class="Both" displayName="$(string.AgentHostUpdateMode)" explainText="$(string.AgentHostUpdateMode_agentHostUpdateMode)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.AgentHostUpdateMode)">
+			<parentCategory ref="agentHostConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<enum id="AgentHostUpdateMode" valueName="AgentHostUpdateMode">
+			<item displayName="$(string.AgentHostUpdateMode_agentHostUpdateMode.default)"><value><string>default</string></value></item>
+			<item displayName="$(string.AgentHostUpdateMode_agentHostUpdateMode.on)"><value><string>on</string></value></item>
+			<item displayName="$(string.AgentHostUpdateMode_agentHostUpdateMode.none)"><value><string>none</string></value></item>
+		</enum>
+			</elements>
+		</policy>
+		<policy name="BlockExtensionInstallFromVsix" class="Both" displayName="$(string.BlockExtensionInstallFromVsix)" explainText="$(string.BlockExtensionInstallFromVsix_extensions_blockInstallFromVsix_policy)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.BlockExtensionInstallFromVsix)">
+			<parentCategory ref="extensionsConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<boolean id="BlockExtensionInstallFromVsix" valueName="BlockExtensionInstallFromVsix">
+			<trueValue><decimal value="1" /></trueValue><falseValue><decimal value="0" /></falseValue>
+		</boolean>
+			</elements>
+		</policy>
+		<policy name="BlockExtensionInstallFromVsixExceptions" class="Both" displayName="$(string.BlockExtensionInstallFromVsixExceptions)" explainText="$(string.BlockExtensionInstallFromVsixExceptions_extensions_blockInstallFromVsixExceptions_policy)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.BlockExtensionInstallFromVsixExceptions)">
+			<parentCategory ref="extensionsConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<multiText id="BlockExtensionInstallFromVsixExceptions" valueName="BlockExtensionInstallFromVsixExceptions" required="true" />
+			</elements>
+		</policy>
+		<policy name="UpdateMode" class="Both" displayName="$(string.UpdateMode)" explainText="$(string.UpdateMode_updateMode)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.UpdateMode)">
+			<parentCategory ref="updateConfigurationTitle" />
+			<supportedOn ref="Supported_1_67" />
+			<elements>
+		<enum id="UpdateMode" valueName="UpdateMode">
+			<item displayName="$(string.UpdateMode_none)"><value><string>none</string></value></item>
+			<item displayName="$(string.UpdateMode_manual)"><value><string>manual</string></value></item>
+			<item displayName="$(string.UpdateMode_start)"><value><string>start</string></value></item>
+			<item displayName="$(string.UpdateMode_default)"><value><string>default</string></value></item>
+			<item displayName="$(string.UpdateMode_silentlyApplyOnQuit)"><value><string>silentlyApplyOnQuit</string></value></item>
+		</enum>
+			</elements>
+		</policy>
+		<policy name="AgentRemoteWorkspaceAuthorities" class="Both" displayName="$(string.AgentRemoteWorkspaceAuthorities)" explainText="$(string.AgentRemoteWorkspaceAuthorities_agent_remoteWorkspaceAuthorities_policyDescription)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.AgentRemoteWorkspaceAuthorities)">
+			<parentCategory ref="cursorGeneralConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<text id="AgentRemoteWorkspaceAuthorities" valueName="AgentRemoteWorkspaceAuthorities" required="true" />
+			</elements>
+		</policy>
+		<policy name="NetworkDisableHttp2" class="Both" displayName="$(string.NetworkDisableHttp2)" explainText="$(string.NetworkDisableHttp2_http2_disable_description)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.NetworkDisableHttp2)">
+			<parentCategory ref="cursorGeneralConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<boolean id="NetworkDisableHttp2" valueName="NetworkDisableHttp2">
+			<trueValue><decimal value="1" /></trueValue><falseValue><decimal value="0" /></falseValue>
+		</boolean>
+			</elements>
+		</policy>
+		<policy name="IndexRepositoriesForInstantGrep" class="Both" displayName="$(string.IndexRepositoriesForInstantGrep)" explainText="$(string.IndexRepositoriesForInstantGrep_instantGrep_indexRepositories_policyDescription)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.IndexRepositoriesForInstantGrep)">
+			<parentCategory ref="cursorGeneralConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<boolean id="IndexRepositoriesForInstantGrep" valueName="IndexRepositoriesForInstantGrep">
+			<trueValue><decimal value="1" /></trueValue><falseValue><decimal value="0" /></falseValue>
+		</boolean>
+			</elements>
+		</policy>
+		<policy name="RemoteAutoForwardPorts" class="Both" displayName="$(string.RemoteAutoForwardPorts)" explainText="$(string.RemoteAutoForwardPorts_remote_autoForwardPorts_policyDescription)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.RemoteAutoForwardPorts)">
+			<parentCategory ref="remote" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<boolean id="RemoteAutoForwardPorts" valueName="RemoteAutoForwardPorts">
+			<trueValue><decimal value="1" /></trueValue><falseValue><decimal value="0" /></falseValue>
+		</boolean>
+			</elements>
+		</policy>
+		<policy name="ExtensionGalleryServiceUrl" class="Both" displayName="$(string.ExtensionGalleryServiceUrl)" explainText="$(string.ExtensionGalleryServiceUrl_extensions_gallery_serviceUrl)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.ExtensionGalleryServiceUrl)">
+			<parentCategory ref="extensionsConfigurationTitle" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<text id="ExtensionGalleryServiceUrl" valueName="ExtensionGalleryServiceUrl" required="true" />
+			</elements>
+		</policy>
+		<policy name="AllowedExtensions" class="Both" displayName="$(string.AllowedExtensions)" explainText="$(string.AllowedExtensions_extensions_allowed_policy)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.AllowedExtensions)">
+			<parentCategory ref="extensionsConfigurationTitle" />
+			<supportedOn ref="Supported_1_96" />
+			<elements>
+		<multiText id="AllowedExtensions" valueName="AllowedExtensions" required="true" />
+			</elements>
+		</policy>
+		<policy name="DevContainersEnableSSHAgentForwarding" class="Both" displayName="$(string.DevContainersEnableSSHAgentForwarding)" explainText="$(string.DevContainersEnableSSHAgentForwarding_dev_containers_enableSSHAgentForwarding_policyDescription)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.DevContainersEnableSSHAgentForwarding)">
+			<parentCategory ref="extensionConfigurationPolicy" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<boolean id="DevContainersEnableSSHAgentForwarding" valueName="DevContainersEnableSSHAgentForwarding">
+			<trueValue><decimal value="1" /></trueValue><falseValue><decimal value="0" /></falseValue>
+		</boolean>
+			</elements>
+		</policy>
+		<policy name="DevContainersEnableGPGAgentForwarding" class="Both" displayName="$(string.DevContainersEnableGPGAgentForwarding)" explainText="$(string.DevContainersEnableGPGAgentForwarding_dev_containers_enableGPGAgentForwarding_policyDescription)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.DevContainersEnableGPGAgentForwarding)">
+			<parentCategory ref="extensionConfigurationPolicy" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<boolean id="DevContainersEnableGPGAgentForwarding" valueName="DevContainersEnableGPGAgentForwarding">
+			<trueValue><decimal value="1" /></trueValue><falseValue><decimal value="0" /></falseValue>
+		</boolean>
+			</elements>
+		</policy>
+		<policy name="DevContainersCopyGitConfig" class="Both" displayName="$(string.DevContainersCopyGitConfig)" explainText="$(string.DevContainersCopyGitConfig_dev_containers_copyGitConfig_policyDescription)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.DevContainersCopyGitConfig)">
+			<parentCategory ref="extensionConfigurationPolicy" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<boolean id="DevContainersCopyGitConfig" valueName="DevContainersCopyGitConfig">
+			<trueValue><decimal value="1" /></trueValue><falseValue><decimal value="0" /></falseValue>
+		</boolean>
+			</elements>
+		</policy>
+		<policy name="DevContainersDefaultExtensions" class="Both" displayName="$(string.DevContainersDefaultExtensions)" explainText="$(string.DevContainersDefaultExtensions_dev_containers_defaultExtensions_policyDescription)" key="Software\Policies\Cursor\Cursor" presentation="$(presentation.DevContainersDefaultExtensions)">
+			<parentCategory ref="extensionConfigurationPolicy" />
+			<supportedOn ref="Supported_1_99" />
+			<elements>
+		<multiText id="DevContainersDefaultExtensions" valueName="DevContainersDefaultExtensions" required="true" />
+			</elements>
+		</policy>
+	</policies>
+</policyDefinitions>

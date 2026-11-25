@@ -1,0 +1,773 @@
+import 'package:flutter/material.dart';
+
+import '../services/local_storage_service.dart';
+import '../widgets/premium_background.dart';
+
+class KnowledgeLibraryScreen extends StatefulWidget {
+  const KnowledgeLibraryScreen({super.key});
+
+  @override
+  State<KnowledgeLibraryScreen> createState() => _KnowledgeLibraryScreenState();
+}
+
+class _KnowledgeLibraryScreenState extends State<KnowledgeLibraryScreen> {
+  final LocalStorageService _storage = LocalStorageService.instance;
+
+  Set<String> _savedWisdom = <String>{};
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedWisdom();
+  }
+
+  Future<void> _loadSavedWisdom() async {
+    final items = await _storage.getSavedWisdom();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _savedWisdom = items.toSet();
+      _loading = false;
+    });
+  }
+
+  Future<void> _toggleWisdom(String title) async {
+    await _storage.toggleSavedWisdom(title);
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      if (_savedWisdom.contains(title)) {
+        _savedWisdom.remove(title);
+      } else {
+        _savedWisdom.add(title);
+      }
+    });
+
+    final saved = _savedWisdom.contains(title);
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          duration: const Duration(milliseconds: 1400),
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            saved ? 'Saved to your wisdom collection' : 'Removed from saved wisdom',
+          ),
+        ),
+      );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: PremiumBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Read. Discover. Understand.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Knowledge Library',
+                            style: TextStyle(
+                              fontSize: 29,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF183B2A),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFFE8D7AE),
+                            Color(0xFFF3E9D0),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(17),
+                        border: Border.all(
+                          color: const Color(0xFFB89452).withValues(
+                            alpha: 0.24,
+                          ),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.menu_book_rounded,
+                        color: Color(0xFF8A632F),
+                        size: 26,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xFF183B2A),
+                        Color(0xFF42684D),
+                        Color(0xFF8A632F),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(
+                      color: const Color(0xFFE5CF98).withValues(
+                        alpha: 0.28,
+                      ),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF183B2A).withValues(
+                          alpha: 0.17,
+                        ),
+                        blurRadius: 23,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        right: -25,
+                        top: -28,
+                        child: Container(
+                          width: 130,
+                          height: 130,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFFE5CF98).withValues(
+                                alpha: 0.12,
+                              ),
+                              width: 1.4,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        right: 8,
+                        top: 20,
+                        child: Icon(
+                          Icons.auto_stories_rounded,
+                          size: 82,
+                          color: const Color(0xFFE5CF98).withValues(
+                            alpha: 0.08,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        right: -5,
+                        bottom: -28,
+                        child: Icon(
+                          Icons.eco_rounded,
+                          size: 92,
+                          color: Colors.white.withValues(
+                            alpha: 0.06,
+                          ),
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 11,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFB89452).withValues(
+                                alpha: 0.16,
+                              ),
+                              borderRadius: BorderRadius.circular(30),
+                              border: Border.all(
+                                color: const Color(0xFFE5CF98).withValues(
+                                  alpha: 0.20,
+                                ),
+                              ),
+                            ),
+                            child: const Text(
+                              'JEEVAN SUTRA COLLECTION',
+                              style: TextStyle(
+                                color: Color(0xFFF3E8CD),
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.05,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          const Text(
+                            'Knowledge worth\nexploring.',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 29,
+                              height: 1.12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Discover ideas, traditions, practices, and stories that connect knowledge with everyday life.',
+                            style: TextStyle(
+                              color: Colors.white.withValues(
+                                alpha: 0.84,
+                              ),
+                              fontSize: 13.5,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 28),
+
+                const Text(
+                  'Explore collections',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF183B2A),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                Text(
+                  'Browse different areas of Indian knowledge through simple introductions.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.45,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+
+                const SizedBox(height: 17),
+
+                const _LibraryCard(
+                  icon: Icons.health_and_safety_rounded,
+                  title: 'Health & Wellness',
+                  description:
+                      'Explore educational ideas about everyday wellbeing, routines, rest, food, and mindful living.',
+                  accent: Color(0xFF2F6B4F),
+                ),
+
+                const _LibraryCard(
+                  icon: Icons.spa_rounded,
+                  title: 'Ayurveda',
+                  description:
+                      'Learn introductory concepts connected with a traditional Indian system of knowledge and wellness.',
+                  accent: Color(0xFF8A632F),
+                ),
+
+                const _LibraryCard(
+                  icon: Icons.self_improvement_rounded,
+                  title: 'Yoga & Philosophy',
+                  description:
+                      'Discover ideas around yoga, attention, awareness, and balanced living.',
+                  accent: Color(0xFF765B8A),
+                ),
+
+                const _LibraryCard(
+                  icon: Icons.public_rounded,
+                  title: 'Indian Traditions',
+                  description:
+                      'Explore customs, cultural practices, festivals, and knowledge from different regions of India.',
+                  accent: Color(0xFFB07832),
+                ),
+
+                const _LibraryCard(
+                  icon: Icons.auto_stories_rounded,
+                  title: 'Ancient Texts',
+                  description:
+                      'Get simple introductions to important texts and knowledge traditions from Indian history.',
+                  accent: Color(0xFF547A9A),
+                ),
+
+                const SizedBox(height: 16),
+
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Featured reading',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF183B2A),
+                        ),
+                      ),
+                    ),
+                    if (!_loading && _savedWisdom.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE7F0EA),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${_savedWisdom.length} saved',
+                          style: const TextStyle(
+                            color: Color(0xFF2F6B4F),
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+
+                const SizedBox(height: 14),
+
+                _ReadingCard(
+                  icon: Icons.wb_sunny_rounded,
+                  label: 'DAILY LIFE',
+                  title: 'Understanding Dinacharya',
+                  description:
+                      'Explore the idea of creating a mindful and consistent daily rhythm.',
+                  accent: const Color(0xFFB07832),
+                  saved: _savedWisdom.contains('Understanding Dinacharya'),
+                  onSave: () => _toggleWisdom('Understanding Dinacharya'),
+                ),
+
+                _ReadingCard(
+                  icon: Icons.cloud_rounded,
+                  label: 'SEASONS',
+                  title: 'Understanding Ritucharya',
+                  description:
+                      'Discover the concept of adapting everyday habits with seasonal changes.',
+                  accent: const Color(0xFF547A9A),
+                  saved: _savedWisdom.contains('Understanding Ritucharya'),
+                  onSave: () => _toggleWisdom('Understanding Ritucharya'),
+                ),
+
+                _ReadingCard(
+                  icon: Icons.local_florist_rounded,
+                  label: 'NATURE',
+                  title: 'Traditional Plant Knowledge',
+                  description:
+                      'Learn how plants have been understood and used across generations.',
+                  accent: const Color(0xFF3C7A55),
+                  saved: _savedWisdom.contains('Traditional Plant Knowledge'),
+                  onSave: () =>
+                      _toggleWisdom('Traditional Plant Knowledge'),
+                ),
+
+                const SizedBox(height: 16),
+
+                const Text(
+                  'A library for curiosity',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF183B2A),
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                Container(
+                  padding: const EdgeInsets.all(19),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.90),
+                    borderRadius: BorderRadius.circular(23),
+                    border: Border.all(
+                      color: const Color(0xFFB89452).withValues(
+                        alpha: 0.10,
+                      ),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(
+                          alpha: 0.035,
+                        ),
+                        blurRadius: 14,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: const Column(
+                    children: [
+                      _LibraryTip(
+                        icon: Icons.search_rounded,
+                        title: 'Stay curious',
+                        text:
+                            'Explore topics that interest you and build your understanding gradually.',
+                      ),
+                      SizedBox(height: 14),
+                      _LibraryTip(
+                        icon: Icons.compare_arrows_rounded,
+                        title: 'Think critically',
+                        text:
+                            'Consider historical, cultural, and modern perspectives together.',
+                      ),
+                      SizedBox(height: 14),
+                      _LibraryTip(
+                        icon: Icons.menu_book_rounded,
+                        title: 'Keep learning',
+                        text:
+                            'Use reliable sources and keep exploring beyond a single introduction.',
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFFE7F0EA),
+                        const Color(0xFFF0EAD9).withValues(
+                          alpha: 0.78,
+                        ),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(21),
+                    border: Border.all(
+                      color: const Color(0xFFB89452).withValues(
+                        alpha: 0.11,
+                      ),
+                    ),
+                  ),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.auto_awesome_rounded,
+                        color: Color(0xFF8A632F),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Use the library to explore, compare, and learn. Cultural and historical information is presented for education and discovery.',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            height: 1.45,
+                            color: Color(0xFF5E6A62),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LibraryCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String description;
+  final Color accent;
+
+  const _LibraryCard({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.accent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(17),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.90),
+        borderRadius: BorderRadius.circular(21),
+        border: Border.all(
+          color: accent.withValues(alpha: 0.12),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 11,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Icon(
+              icon,
+              color: accent,
+              size: 25,
+            ),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF183B2A),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.45,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReadingCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String title;
+  final String description;
+  final Color accent;
+  final bool saved;
+  final VoidCallback onSave;
+
+  const _ReadingCard({
+    required this.icon,
+    required this.label,
+    required this.title,
+    required this.description,
+    required this.accent,
+    required this.saved,
+    required this.onSave,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 11),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(19),
+        border: Border.all(
+          color: saved
+              ? const Color(0xFFB89452).withValues(alpha: 0.28)
+              : const Color(0xFFB89452).withValues(alpha: 0.09),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.025),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 45,
+            height: 45,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              icon,
+              color: accent,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: accent,
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.9,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Color(0xFF183B2A),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 11.2,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 7),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onSave,
+              borderRadius: BorderRadius.circular(14),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: saved
+                      ? const Color(0xFFE9D9B3)
+                      : const Color(0xFFF1F3EF),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: saved
+                        ? const Color(0xFFB89452).withValues(alpha: 0.24)
+                        : Colors.transparent,
+                  ),
+                ),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  child: Icon(
+                    saved
+                        ? Icons.bookmark_rounded
+                        : Icons.bookmark_border_rounded,
+                    key: ValueKey<bool>(saved),
+                    color: saved
+                        ? const Color(0xFF8A632F)
+                        : const Color(0xFF6F7D74),
+                    size: 21,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LibraryTip extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String text;
+
+  const _LibraryTip({
+    required this.icon,
+    required this.title,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 43,
+          height: 43,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE5F0E9),
+            borderRadius: BorderRadius.circular(13),
+          ),
+          child: Icon(
+            icon,
+            color: const Color(0xFF2F6B4F),
+            size: 21,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Color(0xFF183B2A),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                text,
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 11.5,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}

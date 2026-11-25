@@ -1,4 +1,4 @@
-﻿// Consistency Streak Header Badge Component for Flutter with Pop Animation
+// Consistency Streak Header Badge Component for Flutter with Pop Animation
 import 'package:flutter/material.dart';
 
 import 'package:jeevan_sutra/theme/jeevan_sutra_ui_theme.dart';
@@ -27,8 +27,7 @@ class _ConsistencyStreakBadgeState extends State<ConsistencyStreakBadge>
   late Animation<double> _scaleAnimation;
 
   bool get isTodayAchieved => widget.completedTasks >= widget.totalRequired;
-  int get currentStreak =>
-      isTodayAchieved ? widget.baseStreakDays + 1 : widget.baseStreakDays;
+  int get currentStreak => widget.baseStreakDays;
 
   @override
   void initState() {

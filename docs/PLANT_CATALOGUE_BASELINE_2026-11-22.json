@@ -1,0 +1,18 @@
+{
+  "snapshotDate": "2026-11-22",
+  "sourceArchive": "jeevan_sutra_source_review.zip",
+  "databaseVersion": "1.1",
+  "recordCount": 92,
+  "distinctFamilies": 50,
+  "uniqueIds": 92,
+  "uniqueScientificNameStrings": 92,
+  "reviewStatusCounts": {"research_extracted": 92},
+  "evidenceLevelCounts": {"not_assessed": 92},
+  "qualityGaps": {
+    "missingIdentification": 7,
+    "missingSafetySummary": 11,
+    "legacyUnstructuredSourceNotes": 92
+  },
+  "validation": "passed with warnings",
+  "interpretation": "Structural validation only. Taxonomy, claims, safety and source accuracy have not been independently verified."
+}

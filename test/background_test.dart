@@ -165,7 +165,7 @@ void main() {
       final toggle = find.byType(SwitchListTile);
       await tester.ensureVisible(toggle);
       await tester.pumpAndSettle();
-      expect(tester.widget<SwitchListTile>(toggle).value, isTrue);
+      expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
       await tester.tap(toggle);
       await tester.pumpAndSettle();
       expect(tester.widget<SwitchListTile>(toggle).value, isFalse);

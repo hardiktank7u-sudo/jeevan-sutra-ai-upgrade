@@ -20,6 +20,9 @@ dependencies:
   flutter_markdown: ^0.7.7+1
   firebase_app_check: ^0.4.8
   flutter_local_notifications: ^18.0.0
+  timezone: ^0.10.1
+  flutter_timezone: ^5.1.1
+  cloud_firestore: ^6.10.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -35,6 +38,7 @@ flutter:
     - assets/branding/logo_emblem.png
     - assets/branding/logo_wordmark.png
     - assets/branding/logo_tagline.png
+    - assets/branding/test_plant.jpg
     - assets/knowledge/plants.json
 
 flutter_launcher_icons:

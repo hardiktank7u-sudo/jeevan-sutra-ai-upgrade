@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<policyDefinitionResources revision="1.0" schemaVersion="1.0">
+	<displayName />
+	<description />
+	<resources>
+		<stringTable>
+			<string id="Application">Cursor</string>
+			<string id="Supported_1_67">Cursor &gt;= 1.67</string>
+			<string id="Supported_1_96">Cursor &gt;= 1.96</string>
+			<string id="Supported_1_99">Cursor &gt;= 1.99</string>
+			<string id="Category_cursorAuthConfigurationTitle">Cursor Auth</string>
+			<string id="Category_cursorAirlockConfigurationTitle">SpaceX Airlock</string>
+			<string id="Category_cursorManagedDeploymentConfigurationTitle">Managed Deployment</string>
+			<string id="Category_cursorOrbitAirlockConfigurationTitle">Orbit Airlock</string>
+			<string id="Category_securityConfigurationTitle">Security</string>
+			<string id="Category_agentHostConfigurationTitle">Agent Host</string>
+			<string id="Category_extensionsConfigurationTitle">Extensions</string>
+			<string id="Category_updateConfigurationTitle">Update</string>
+			<string id="Category_cursorGeneralConfigurationTitle">General</string>
+			<string id="Category_remote">Remote</string>
+			<string id="Category_extensionsConfigurationTitle">Extensions</string>
+			<string id="Category_extensionConfigurationPolicy">Extension Settings</string>
+			<string id="AllowedTeamId">AllowedTeamId</string>
+			<string id="AllowedTeamId_cursor_allowedTeamId">Specify the required team id that a user must belong to in order to use Cursor. If set and the signed-in user is not part of the team, Cursor will automatically sign the user out.</string>
+			<string id="SignInEnforcement">SignInEnforcement</string>
+			<string id="SignInEnforcement_cursor_signInEnforcement">When enabled via device management (MDM), Cursor's backend refuses to issue or refresh sign-in sessions for accounts that match none of the configured allowed organizations, teams, emails, or email domains.</string>
+			<string id="AllowedOrganizationIds">AllowedOrganizationIds</string>
+			<string id="AllowedOrganizationIds_cursor_allowedOrganizationIds">Comma-separated list of Cursor organization ids whose members are allowed to sign in on this device (set via device management).</string>
+			<string id="AllowedTeamIds">AllowedTeamIds</string>
+			<string id="AllowedTeamIds_cursor_allowedTeamIds">Comma-separated list of Cursor team ids whose members are allowed to sign in on this device (set via device management). Supersedes the singular AllowedTeamId policy; both are honored.</string>
+			<string id="AllowedLoginEmails">AllowedLoginEmails</string>
+			<string id="AllowedLoginEmails_cursor_allowedLoginEmails">Comma-separated list of exact account emails allowed to sign in on this device (set via device management). Compared case-insensitively.</string>
+			<string id="AllowedLoginDomains">AllowedLoginDomains</string>
+			<string id="AllowedLoginDomains_cursor_allowedLoginDomains">Comma-separated list of email domains (e.g. example.com) whose accounts are allowed to sign in on this device (set via device management). Exact domain match only; subdomains are not implicitly included.</string>
+			<string id="DeploymentId">DeploymentId</string>
+			<string id="DeploymentId_cursor_deploymentId">When set via device management (MDM) to a deployment id, Cursor connects only to that deployment and cannot be switched away from it. An id this version does not support blocks sign-in. 0 or unset is the default service.</string>
+			<string id="AirlockContainerName">AirlockContainerName</string>
+			<string id="AirlockContainerName_cursor_airlock_containerName">Name of the local Docker or Podman container that Cursor prepares and opens while SpaceX mode is on (set via device management). Required for the airlock.</string>
+			<string id="AirlockDefaultWorkspace">AirlockDefaultWorkspace</string>
+			<string id="AirlockDefaultWorkspace_cursor_airlock_defaultWorkspace">Absolute path of the folder inside the airlock container that Cursor opens (set via device management). Required for the airlock.</string>
+			<string id="AirlockContainerUser">AirlockContainerUser</string>
+			<string id="AirlockContainerUser_cursor_airlock_containerUser">User that Cursor runs as inside the airlock container (set via device management). When empty, Cursor uses the container's default user.</string>
+			<string id="AirlockEngine">AirlockEngine</string>
+			<string id="AirlockEngine_cursor_airlock_engine">Container engine command for the airlock (set via device management): docker, podman, the absolute path of either, or the absolute path of a wrapper script that runs every engine command. When empty, Cursor uses docker.</string>
+			<string id="AirlockCreateContainerHook">AirlockCreateContainerHook</string>
+			<string id="AirlockCreateContainerHook_cursor_airlock_createContainerHook">Absolute path of the script that creates the airlock container when it doesn't exist (set via device management).</string>
+			<string id="AirlockStartContainerHook">AirlockStartContainerHook</string>
+			<string id="AirlockStartContainerHook_cursor_airlock_startContainerHook">Absolute path of the script that starts the airlock container when it isn't running (set via device management). When empty, Cursor runs the engine's own start command.</string>
+			<string id="AirlockPreAttachContainerHook">AirlockPreAttachContainerHook</string>
+			<string id="AirlockPreAttachContainerHook_cursor_airlock_preAttachContainerHook">Absolute path of the script that Cursor runs each time, just before it opens the airlock container (set via device management).</string>
+			<string id="AirlockRestartContainerHook">AirlockRestartContainerHook</string>
+			<string id="AirlockRestartContainerHook_cursor_airlock_restartContainerHook">Absolute path of the script that restarts the airlock container (set via device management). When empty, Cursor runs the engine's own restart command.</string>
+			<string id="AirlockContainerStatusHook">AirlockContainerStatusHook</string>
+			<string id="AirlockContainerStatusHook_cursor_airlock_containerStatusHook">Absolute path of the script that reports the airlock container's status as JSON (set via device management).</string>
+			<string id="AirlockHookTimeoutSeconds">AirlockHookTimeoutSeconds</string>
+			<string id="AirlockHookTimeoutSeconds_cursor_airlock_hookTimeoutSeconds">How long, in seconds, Cursor lets each airlock hook script run, and waits for the container to start, before it gives up (set via device management).</string>
+			<string id="DeploymentBackendUrl">DeploymentBackendUrl</string>
+			<string id="DeploymentBackendUrl_cursor_deployment_backendUrl">Cursor Orbit only: https origin of the API of the deployment Cursor Orbit connects to (set via device management). Required.</string>
+			<string id="DeploymentWebsiteUrl">DeploymentWebsiteUrl</string>
+			<string id="DeploymentWebsiteUrl_cursor_deployment_websiteUrl">Cursor Orbit only: https origin of that deployment's website, where users sign in (set via device management). Required.</string>
+			<string id="AirlockRequired">AirlockRequired</string>
+			<string id="AirlockRequired_cursor_airlock_required">Cursor Orbit only: whether local agents run only in the Airlock (set via device management). When unset or false, local agents run on this computer and in the remote workspaces AgentRemoteWorkspaceAuthorities allows. A window reads it when it opens, so reload after a change.</string>
+			<string id="WorkspaceTrustEnabled">WorkspaceTrustEnabled</string>
+			<string id="WorkspaceTrustEnabled_workspace_trust_description">Controls whether or not Workspace Trust is enabled within VS Code.</string>
+			<string id="AgentHostUpdateMode">AgentHostUpdateMode</string>
+			<string id="AgentHostUpdateMode_agentHostUpdateMode">Controls whether the agent that runs local agent turns can be updated between Cursor releases. Updates are downloaded from a Cursor service and applied at the next agent turn.</string>
+			<string id="AgentHostUpdateMode_agentHostUpdateMode_default">Follow 'update.mode': updated unless Cursor updates are turned off.</string>
+			<string id="AgentHostUpdateMode_agentHostUpdateMode_on">Update even when Cursor updates are turned off.</string>
+			<string id="AgentHostUpdateMode_agentHostUpdateMode_none">Never update; keep the agent packed into this Cursor release.</string>
+			<string id="BlockExtensionInstallFromVsix">BlockExtensionInstallFromVsix</string>
+			<string id="BlockExtensionInstallFromVsix_extensions_blockInstallFromVsix_policy">Block installing extensions from VSIX files. Marketplace installs are unaffected.</string>
+			<string id="BlockExtensionInstallFromVsixExceptions">BlockExtensionInstallFromVsixExceptions</string>
+			<string id="BlockExtensionInstallFromVsixExceptions_extensions_blockInstallFromVsixExceptions_policy">Extension IDs (publisher.name), as a JSON array, that can still be installed from VSIX files while BlockExtensionInstallFromVsix is enabled.</string>
+			<string id="UpdateMode">UpdateMode</string>
+			<string id="UpdateMode_updateMode">Configure whether you receive automatic updates. Requires a restart after change. The updates are fetched from a Microsoft online service.</string>
+			<string id="UpdateMode_none">Disable updates.</string>
+			<string id="UpdateMode_manual">Disable automatic background update checks. Updates will be available if you manually check for updates.</string>
+			<string id="UpdateMode_start">Check for updates only on startup. Disable automatic background update checks.</string>
+			<string id="UpdateMode_default">Enable automatic update checks. Code will check for updates automatically and periodically.</string>
+			<string id="UpdateMode_silentlyApplyOnQuit">Enable automatic update checks and install updates automatically without prompting. Updates will be applied automatically when available.</string>
+			<string id="AgentRemoteWorkspaceAuthorities">AgentRemoteWorkspaceAuthorities</string>
+			<string id="AgentRemoteWorkspaceAuthorities_agent_remoteWorkspaceAuthorities_policyDescription">Require Agent to run in a remote workspace, optionally restricted to comma-separated remote authority patterns. An empty value allows every remote authority.</string>
+			<string id="NetworkDisableHttp2">NetworkDisableHttp2</string>
+			<string id="NetworkDisableHttp2_http2_disable_description">Disable HTTP/2 for all requests, and use HTTP/1.1 instead. This increases resource utilization and latency, but is useful behind a corporate proxy that blocks HTTP/2.</string>
+			<string id="IndexRepositoriesForInstantGrep">IndexRepositoriesForInstantGrep</string>
+			<string id="IndexRepositoriesForInstantGrep_instantGrep_indexRepositories_policyDescription">Controls whether Cursor indexes repositories locally for Instant Grep. Disable this policy to prevent repository indexing on managed devices.</string>
+			<string id="RemoteAutoForwardPorts">RemoteAutoForwardPorts</string>
+			<string id="RemoteAutoForwardPorts_remote_autoForwardPorts_policyDescription">Automatically forward ports that new processes listen on in remote windows, including dev containers. When false, new listening ports are not forwarded automatically, though extensions and opened URLs can still forward ports.</string>
+			<string id="ExtensionGalleryServiceUrl">ExtensionGalleryServiceUrl</string>
+			<string id="ExtensionGalleryServiceUrl_extensions_gallery_serviceUrl">Configure the Marketplace service URL to connect to</string>
+			<string id="AllowedExtensions">AllowedExtensions</string>
+			<string id="AllowedExtensions_extensions_allowed_policy">Specify a list of extensions that are allowed to use. This helps maintain a secure and consistent development environment by restricting the use of unauthorized extensions. More information: https://code.visualstudio.com/docs/setup/enterprise#_configure-allowed-extensions</string>
+			<string id="DevContainersEnableSSHAgentForwarding">DevContainersEnableSSHAgentForwarding</string>
+			<string id="DevContainersEnableSSHAgentForwarding_dev_containers_enableSSHAgentForwarding_policyDescription">Forward the local SSH agent into dev containers. When false, code running in a container cannot use the SSH keys loaded on this device.</string>
+			<string id="DevContainersEnableGPGAgentForwarding">DevContainersEnableGPGAgentForwarding</string>
+			<string id="DevContainersEnableGPGAgentForwarding_dev_containers_enableGPGAgentForwarding_policyDescription">Forward the local GPG agent into dev containers. When false, code running in a container cannot use the GPG keys loaded on this device.</string>
+			<string id="DevContainersCopyGitConfig">DevContainersCopyGitConfig</string>
+			<string id="DevContainersCopyGitConfig_dev_containers_copyGitConfig_policyDescription">Copy the local Git configuration into dev containers. When false, containers start without this device's .gitconfig.</string>
+			<string id="DevContainersDefaultExtensions">DevContainersDefaultExtensions</string>
+			<string id="DevContainersDefaultExtensions_dev_containers_defaultExtensions_policyDescription">Extensions installed in every dev container, as a JSON array of extension ids. Use [] to install none.</string>
+		</stringTable>
+		<presentationTable>
+			<presentation id="AllowedTeamId"><textBox refId="AllowedTeamId"><label>AllowedTeamId:</label></textBox></presentation>
+			<presentation id="SignInEnforcement"><checkBox refId="SignInEnforcement">SignInEnforcement</checkBox></presentation>
+			<presentation id="AllowedOrganizationIds"><textBox refId="AllowedOrganizationIds"><label>AllowedOrganizationIds:</label></textBox></presentation>
+			<presentation id="AllowedTeamIds"><textBox refId="AllowedTeamIds"><label>AllowedTeamIds:</label></textBox></presentation>
+			<presentation id="AllowedLoginEmails"><textBox refId="AllowedLoginEmails"><label>AllowedLoginEmails:</label></textBox></presentation>
+			<presentation id="AllowedLoginDomains"><textBox refId="AllowedLoginDomains"><label>AllowedLoginDomains:</label></textBox></presentation>
+			<presentation id="DeploymentId"><decimalTextBox refId="DeploymentId" defaultValue="0">DeploymentId</decimalTextBox></presentation>
+			<presentation id="AirlockContainerName"><textBox refId="AirlockContainerName"><label>AirlockContainerName:</label></textBox></presentation>
+			<presentation id="AirlockDefaultWorkspace"><textBox refId="AirlockDefaultWorkspace"><label>AirlockDefaultWorkspace:</label></textBox></presentation>
+			<presentation id="AirlockContainerUser"><textBox refId="AirlockContainerUser"><label>AirlockContainerUser:</label></textBox></presentation>
+			<presentation id="AirlockEngine"><textBox refId="AirlockEngine"><label>AirlockEngine:</label></textBox></presentation>
+			<presentation id="AirlockCreateContainerHook"><textBox refId="AirlockCreateContainerHook"><label>AirlockCreateContainerHook:</label></textBox></presentation>
+			<presentation id="AirlockStartContainerHook"><textBox refId="AirlockStartContainerHook"><label>AirlockStartContainerHook:</label></textBox></presentation>
+			<presentation id="AirlockPreAttachContainerHook"><textBox refId="AirlockPreAttachContainerHook"><label>AirlockPreAttachContainerHook:</label></textBox></presentation>
+			<presentation id="AirlockRestartContainerHook"><textBox refId="AirlockRestartContainerHook"><label>AirlockRestartContainerHook:</label></textBox></presentation>
+			<presentation id="AirlockContainerStatusHook"><textBox refId="AirlockContainerStatusHook"><label>AirlockContainerStatusHook:</label></textBox></presentation>
+			<presentation id="AirlockHookTimeoutSeconds"><decimalTextBox refId="AirlockHookTimeoutSeconds" defaultValue="120">AirlockHookTimeoutSeconds</decimalTextBox></presentation>
+			<presentation id="DeploymentBackendUrl"><textBox refId="DeploymentBackendUrl"><label>DeploymentBackendUrl:</label></textBox></presentation>
+			<presentation id="DeploymentWebsiteUrl"><textBox refId="DeploymentWebsiteUrl"><label>DeploymentWebsiteUrl:</label></textBox></presentation>
+			<presentation id="AirlockRequired"><checkBox refId="AirlockRequired">AirlockRequired</checkBox></presentation>
+			<presentation id="WorkspaceTrustEnabled"><checkBox refId="WorkspaceTrustEnabled">WorkspaceTrustEnabled</checkBox></presentation>
+			<presentation id="AgentHostUpdateMode"><dropdownList refId="AgentHostUpdateMode" /></presentation>
+			<presentation id="BlockExtensionInstallFromVsix"><checkBox refId="BlockExtensionInstallFromVsix">BlockExtensionInstallFromVsix</checkBox></presentation>
+			<presentation id="BlockExtensionInstallFromVsixExceptions"><multiTextBox refId="BlockExtensionInstallFromVsixExceptions" /></presentation>
+			<presentation id="UpdateMode"><dropdownList refId="UpdateMode" /></presentation>
+			<presentation id="AgentRemoteWorkspaceAuthorities"><textBox refId="AgentRemoteWorkspaceAuthorities"><label>AgentRemoteWorkspaceAuthorities:</label></textBox></presentation>
+			<presentation id="NetworkDisableHttp2"><checkBox refId="NetworkDisableHttp2">NetworkDisableHttp2</checkBox></presentation>
+			<presentation id="IndexRepositoriesForInstantGrep"><checkBox refId="IndexRepositoriesForInstantGrep">IndexRepositoriesForInstantGrep</checkBox></presentation>
+			<presentation id="RemoteAutoForwardPorts"><checkBox refId="RemoteAutoForwardPorts">RemoteAutoForwardPorts</checkBox></presentation>
+			<presentation id="ExtensionGalleryServiceUrl"><textBox refId="ExtensionGalleryServiceUrl"><label>ExtensionGalleryServiceUrl:</label></textBox></presentation>
+			<presentation id="AllowedExtensions"><multiTextBox refId="AllowedExtensions" /></presentation>
+			<presentation id="DevContainersEnableSSHAgentForwarding"><checkBox refId="DevContainersEnableSSHAgentForwarding">DevContainersEnableSSHAgentForwarding</checkBox></presentation>
+			<presentation id="DevContainersEnableGPGAgentForwarding"><checkBox refId="DevContainersEnableGPGAgentForwarding">DevContainersEnableGPGAgentForwarding</checkBox></presentation>
+			<presentation id="DevContainersCopyGitConfig"><checkBox refId="DevContainersCopyGitConfig">DevContainersCopyGitConfig</checkBox></presentation>
+			<presentation id="DevContainersDefaultExtensions"><multiTextBox refId="DevContainersDefaultExtensions" /></presentation>
+		</presentationTable>
+	</resources>
+</policyDefinitionResources>

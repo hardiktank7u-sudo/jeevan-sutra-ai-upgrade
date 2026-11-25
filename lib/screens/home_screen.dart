@@ -32,18 +32,35 @@ class _HomeScreenState extends State<HomeScreen> {
   String _dominantPrakriti = 'Pitta-Kapha';
   int _hydrationCups = 5;
   int _mindfulnessMinutes = 15;
+  int _currentStreakDays = 0;
   late List<RoutineItem> _routines;
 
   @override
   void initState() {
     super.initState();
-    _routines = SampleData.dailyRoutines;
+    _routines = SampleData.dailyRoutines
+        .map(
+          (routine) => RoutineItem(
+            id: routine.id,
+            title: routine.title,
+            sanskritName: routine.sanskritName,
+            time: routine.time,
+            period: routine.period,
+            description: routine.description,
+            benefits: routine.benefits,
+            balancingDosha: routine.balancingDosha,
+          ),
+        )
+        .toList();
     _loadUserData();
   }
 
   Future<void> _loadUserData() async {
     final name = await LocalStorageService.instance.getProfileName();
     final dosha = await LocalStorageService.instance.getDosha();
+    final streak = await LocalStorageService.instance.getStreak();
+    final completed = await LocalStorageService.instance
+        .getDinacharyaCompletedToday();
     if (mounted) {
       setState(() {
         if (name.isNotEmpty && name != 'Wellness Explorer') {
@@ -51,6 +68,10 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         if (dosha != null && dosha.isNotEmpty) {
           _dominantPrakriti = dosha;
+        }
+        _currentStreakDays = streak;
+        for (final routine in _routines) {
+          routine.isCompleted = completed.contains(routine.id);
         }
       });
     }
@@ -61,9 +82,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   int get _completedCount => _routines.where((r) => r.isCompleted).length;
-  bool get _isTodayStreakAchieved => _completedCount >= 4;
-  int get _currentStreakDays => _isTodayStreakAchieved ? 8 : 7;
-  int get _tasksRemainingForStreak => (4 - _completedCount).clamp(0, 4);
+  bool get _isTodayStreakAchieved =>
+      _routines.isNotEmpty && _completedCount == _routines.length;
+  int get _tasksRemainingForStreak =>
+      (_routines.length - _completedCount).clamp(0, _routines.length);
 
   @override
   Widget build(BuildContext context) {
@@ -87,7 +109,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   onBookmark: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text("Wisdom shloka saved to personal sanctuary."),
+                        content: Text(
+                          "Wisdom shloka saved to personal sanctuary.",
+                        ),
                         duration: Duration(seconds: 2),
                       ),
                     );
@@ -127,7 +151,11 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.wb_sunny_rounded, size: 14, color: JeevanSutraColors.mutedGold),
+                  const Icon(
+                    Icons.wb_sunny_rounded,
+                    size: 14,
+                    color: JeevanSutraColors.mutedGold,
+                  ),
                   const SizedBox(width: 6),
                   Flexible(
                     child: Text(
@@ -136,7 +164,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1.1,
-                        color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                        color: isDark
+                            ? JeevanSutraColors.freshLeaf
+                            : JeevanSutraColors.forestGreen,
                       ),
                     ),
                   ),
@@ -149,7 +179,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   letterSpacing: -0.3,
-                  color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+                  color: isDark
+                      ? JeevanSutraColors.darkTextPrimary
+                      : JeevanSutraColors.forestGreen,
                 ),
               ),
               const SizedBox(height: 2),
@@ -157,7 +189,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 "Your journey toward balanced living starts here.",
                 style: TextStyle(
                   fontSize: 12,
-                  color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                  color: isDark
+                      ? JeevanSutraColors.darkTextSecondary
+                      : JeevanSutraColors.secondaryText,
                 ),
               ),
             ],
@@ -165,9 +199,11 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         ConsistencyStreakBadge(
           completedTasks: _completedCount,
-          totalRequired: 4,
-          baseStreakDays: 7,
-          onTap: () => MilestoneCelebrationDialog.show(context, 7),
+          totalRequired: _routines.length,
+          baseStreakDays: _currentStreakDays,
+          onTap: _currentStreakDays >= 7
+              ? () => MilestoneCelebrationDialog.show(context, 7)
+              : null,
         ),
       ],
     );
@@ -177,21 +213,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildConsistencyStreakCard(bool isDark) {
     final weekDays = [
-      {'label': 'M', 'completed': true, 'isToday': false},
-      {'label': 'T', 'completed': true, 'isToday': false},
-      {'label': 'W', 'completed': true, 'isToday': false},
-      {'label': 'T', 'completed': true, 'isToday': false},
-      {'label': 'F', 'completed': true, 'isToday': false},
-      {'label': 'S', 'completed': true, 'isToday': false},
+      {'label': 'M', 'completed': false, 'isToday': false},
+      {'label': 'T', 'completed': false, 'isToday': false},
+      {'label': 'W', 'completed': false, 'isToday': false},
+      {'label': 'T', 'completed': false, 'isToday': false},
+      {'label': 'F', 'completed': false, 'isToday': false},
+      {'label': 'S', 'completed': false, 'isToday': false},
       {'label': 'S', 'completed': _isTodayStreakAchieved, 'isToday': true},
     ];
 
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+        color: isDark
+            ? JeevanSutraColors.darkSurface
+            : JeevanSutraColors.pureWhite,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder, width: 1),
+        border: Border.all(
+          color: isDark
+              ? JeevanSutraColors.darkBorder
+              : JeevanSutraColors.subtleBorder,
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
@@ -220,13 +263,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       : null,
                   color: _isTodayStreakAchieved
                       ? null
-                      : (isDark ? JeevanSutraColors.darkSurfaceElevated : JeevanSutraColors.softSage),
+                      : (isDark
+                            ? JeevanSutraColors.darkSurfaceElevated
+                            : JeevanSutraColors.softSage),
                 ),
                 child: Icon(
                   Icons.local_fire_department_rounded,
                   color: _isTodayStreakAchieved
                       ? Colors.white
-                      : (isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen),
+                      : (isDark
+                            ? JeevanSutraColors.freshLeaf
+                            : JeevanSutraColors.forestGreen),
                   size: 26,
                 ),
               ),
@@ -245,25 +292,36 @@ class _HomeScreenState extends State<HomeScreen> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+                            color: isDark
+                                ? JeevanSutraColors.darkTextPrimary
+                                : JeevanSutraColors.forestGreen,
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: _isTodayStreakAchieved
                                 ? const Color(0xFFFEF3C7)
-                                : (isDark ? JeevanSutraColors.darkCanvas : JeevanSutraColors.warmIvory),
+                                : (isDark
+                                      ? JeevanSutraColors.darkCanvas
+                                      : JeevanSutraColors.warmIvory),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            _isTodayStreakAchieved ? 'Day 8 Unlocked' : '$_completedCount/4 Today',
+                            _isTodayStreakAchieved
+                                ? 'Day $_currentStreakDays achieved'
+                                : '$_completedCount/${_routines.length} Today',
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                               color: _isTodayStreakAchieved
                                   ? const Color(0xFF92400E)
-                                  : (isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText),
+                                  : (isDark
+                                        ? JeevanSutraColors.darkTextSecondary
+                                        : JeevanSutraColors.secondaryText),
                             ),
                           ),
                         ),
@@ -273,10 +331,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                       _isTodayStreakAchieved
                           ? "Tapasya fulfilled for today! Your internal biological flame is steady."
-                          : "Complete $_tasksRemainingForStreak more ${_tasksRemainingForStreak == 1 ? 'task' : 'tasks'} from Dinacharya to secure Day 8.",
+                          : "Complete $_tasksRemainingForStreak more ${_tasksRemainingForStreak == 1 ? 'task' : 'tasks'} from Dinacharya.",
                       style: TextStyle(
                         fontSize: 11,
-                        color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                        color: isDark
+                            ? JeevanSutraColors.darkTextSecondary
+                            : JeevanSutraColors.secondaryText,
                         height: 1.3,
                       ),
                     ),
@@ -284,9 +344,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               TextButton(
-                onPressed: () => MilestoneCelebrationDialog.show(context, 7),
+                onPressed: _currentStreakDays >= 7
+                    ? () => MilestoneCelebrationDialog.show(context, 7)
+                    : null,
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
@@ -298,14 +363,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                        color: isDark
+                            ? JeevanSutraColors.freshLeaf
+                            : JeevanSutraColors.forestGreen,
                       ),
                     ),
                     const SizedBox(width: 2),
                     Icon(
                       Icons.chevron_right_rounded,
                       size: 16,
-                      color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                      color: isDark
+                          ? JeevanSutraColors.freshLeaf
+                          : JeevanSutraColors.forestGreen,
                     ),
                   ],
                 ),
@@ -318,7 +387,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: isDark ? JeevanSutraColors.darkCanvas : JeevanSutraColors.warmIvory,
+              color: isDark
+                  ? JeevanSutraColors.darkCanvas
+                  : JeevanSutraColors.warmIvory,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
@@ -356,11 +427,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: isCompleted
-                                        ? (isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen)
-                                        : (isDark ? JeevanSutraColors.darkBorder : const Color(0xFFE4E8E0)),
+                                        ? (isDark
+                                              ? JeevanSutraColors.freshLeaf
+                                              : JeevanSutraColors.forestGreen)
+                                        : (isDark
+                                              ? JeevanSutraColors.darkBorder
+                                              : const Color(0xFFE4E8E0)),
                                     border: isToday && !isCompleted
                                         ? Border.all(
-                                            color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                                            color: isDark
+                                                ? JeevanSutraColors.freshLeaf
+                                                : JeevanSutraColors.forestGreen,
                                             width: 1.5,
                                           )
                                         : null,
@@ -370,7 +447,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ? Icon(
                                             Icons.check_rounded,
                                             size: indicatorSize < 24 ? 14 : 16,
-                                            color: isDark ? JeevanSutraColors.darkCanvas : Colors.white,
+                                            color: isDark
+                                                ? JeevanSutraColors.darkCanvas
+                                                : Colors.white,
                                           )
                                         : (isToday
                                               ? Text(
@@ -379,8 +458,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     fontSize: 10,
                                                     fontWeight: FontWeight.bold,
                                                     color: isDark
-                                                        ? JeevanSutraColors.freshLeaf
-                                                        : JeevanSutraColors.forestGreen,
+                                                        ? JeevanSutraColors
+                                                              .freshLeaf
+                                                        : JeevanSutraColors
+                                                              .forestGreen,
                                                   ),
                                                 )
                                               : null),
@@ -394,7 +475,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                   style: TextStyle(
                                     fontSize: 8,
                                     fontWeight: FontWeight.bold,
-                                    color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                                    color: isDark
+                                        ? JeevanSutraColors.freshLeaf
+                                        : JeevanSutraColors.forestGreen,
                                   ),
                                 ),
                               ],
@@ -408,7 +491,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   height: 36,
                   width: 1,
-                  color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
+                  color: isDark
+                      ? JeevanSutraColors.darkBorder
+                      : JeevanSutraColors.subtleBorder,
                   margin: const EdgeInsets.symmetric(horizontal: 10),
                 ),
                 Column(
@@ -419,7 +504,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
-                        color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                        color: isDark
+                            ? JeevanSutraColors.freshLeaf
+                            : JeevanSutraColors.forestGreen,
                       ),
                     ),
                     Text(
@@ -428,7 +515,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         fontSize: 8,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.8,
-                        color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                        color: isDark
+                            ? JeevanSutraColors.darkTextSecondary
+                            : JeevanSutraColors.secondaryText,
                       ),
                     ),
                   ],
@@ -450,8 +539,14 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark
-              ? [JeevanSutraColors.darkSurfaceElevated, JeevanSutraColors.darkCanvas]
-              : [JeevanSutraColors.forestGreen, JeevanSutraColors.deepBotanical],
+              ? [
+                  JeevanSutraColors.darkSurfaceElevated,
+                  JeevanSutraColors.darkCanvas,
+                ]
+              : [
+                  JeevanSutraColors.forestGreen,
+                  JeevanSutraColors.deepBotanical,
+                ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -473,7 +568,10 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: JeevanSutraColors.freshLeaf.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
@@ -490,19 +588,32 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               Text(
                 "Prakriti Sync • $_dominantPrakriti",
-                style: const TextStyle(color: Color(0xFFBACBC1), fontSize: 11, fontWeight: FontWeight.w500),
+                style: const TextStyle(
+                  color: Color(0xFFBACBC1),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 12),
           const Text(
             '"Small mindful choices create lasting balance."',
-            style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold, height: 1.3),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              height: 1.3,
+            ),
           ),
           const SizedBox(height: 6),
           const Text(
             "Midday sun awakens maximum digestive fire (Jatharagni). Nourish your body with sattvic whole grains and light grounding herbs.",
-            style: TextStyle(color: Color(0xFFBACBC1), fontSize: 11.5, height: 1.4),
+            style: TextStyle(
+              color: Color(0xFFBACBC1),
+              fontSize: 11.5,
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -516,15 +627,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   backgroundColor: JeevanSutraColors.freshLeaf,
                   foregroundColor: JeevanSutraColors.deepBotanical,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
                 child: Row(
                   children: [
                     const Expanded(
                       child: Text(
                         "Explore Today's Guidance",
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -537,10 +656,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.white,
                   side: BorderSide(color: Colors.white.withValues(alpha: 0.25)),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
-                child: const Text("Timeline", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                child: const Text(
+                  "Timeline",
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                ),
               ),
             ],
           ),
@@ -567,14 +694,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 fontSize: 10.5,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1.1,
-                color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                color: isDark
+                    ? JeevanSutraColors.freshLeaf
+                    : JeevanSutraColors.forestGreen,
               ),
             ),
             Text(
               "Illustrative Metrics",
               style: TextStyle(
                 fontSize: 11,
-                color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                color: isDark
+                    ? JeevanSutraColors.darkTextSecondary
+                    : JeevanSutraColors.secondaryText,
               ),
             ),
           ],
@@ -599,9 +730,15 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+                  color: isDark
+                      ? JeevanSutraColors.darkSurface
+                      : JeevanSutraColors.pureWhite,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
+                  border: Border.all(
+                    color: isDark
+                        ? JeevanSutraColors.darkBorder
+                        : JeevanSutraColors.subtleBorder,
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -615,11 +752,17 @@ class _HomeScreenState extends State<HomeScreen> {
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                              color: isDark
+                                  ? JeevanSutraColors.darkTextSecondary
+                                  : JeevanSutraColors.secondaryText,
                             ),
                           ),
                         ),
-                        const Icon(Icons.water_drop_rounded, size: 16, color: Color(0xFF0284C7)),
+                        const Icon(
+                          Icons.water_drop_rounded,
+                          size: 16,
+                          color: Color(0xFF0284C7),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -637,7 +780,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
-                                    color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+                                    color: isDark
+                                        ? JeevanSutraColors.darkTextPrimary
+                                        : JeevanSutraColors.forestGreen,
                                   ),
                                 ),
                                 TextSpan(
@@ -657,13 +802,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             InkWell(
                               onTap: () {
-                                if (_hydrationCups > 0) setState(() => _hydrationCups--);
+                                if (_hydrationCups > 0) {
+                                  setState(() => _hydrationCups--);
+                                }
                               },
                               borderRadius: BorderRadius.circular(6),
                               child: Container(
                                 padding: const EdgeInsets.all(3),
                                 decoration: BoxDecoration(
-                                  color: isDark ? JeevanSutraColors.darkCanvas : JeevanSutraColors.warmIvory,
+                                  color: isDark
+                                      ? JeevanSutraColors.darkCanvas
+                                      : JeevanSutraColors.warmIvory,
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: const Icon(Icons.remove, size: 14),
@@ -672,7 +821,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             const SizedBox(width: 4),
                             InkWell(
                               onTap: () {
-                                if (_hydrationCups < 12) setState(() => _hydrationCups++);
+                                if (_hydrationCups < 12) {
+                                  setState(() => _hydrationCups++);
+                                }
                               },
                               borderRadius: BorderRadius.circular(6),
                               child: Container(
@@ -681,7 +832,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                   color: JeevanSutraColors.forestGreen,
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: const Icon(Icons.add, size: 14, color: Colors.white),
+                                child: const Icon(
+                                  Icons.add,
+                                  size: 14,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                           ],
@@ -693,7 +848,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       "${_hydrationCups * 250} ml recorded",
                       style: TextStyle(
                         fontSize: 9.5,
-                        color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                        color: isDark
+                            ? JeevanSutraColors.darkTextSecondary
+                            : JeevanSutraColors.secondaryText,
                       ),
                     ),
                   ],
@@ -714,7 +871,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 value: "7h 45m",
                 unit: "",
                 caption: "Deep REM: 2h 15m",
-                captionColor: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                captionColor: isDark
+                    ? JeevanSutraColors.darkTextSecondary
+                    : JeevanSutraColors.secondaryText,
               ),
             ),
             const SizedBox(width: 10),
@@ -722,9 +881,15 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+                  color: isDark
+                      ? JeevanSutraColors.darkSurface
+                      : JeevanSutraColors.pureWhite,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
+                  border: Border.all(
+                    color: isDark
+                        ? JeevanSutraColors.darkBorder
+                        : JeevanSutraColors.subtleBorder,
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -738,11 +903,17 @@ class _HomeScreenState extends State<HomeScreen> {
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                              color: isDark
+                                  ? JeevanSutraColors.darkTextSecondary
+                                  : JeevanSutraColors.secondaryText,
                             ),
                           ),
                         ),
-                        const Icon(Icons.auto_awesome_rounded, size: 16, color: JeevanSutraColors.freshLeaf),
+                        const Icon(
+                          Icons.auto_awesome_rounded,
+                          size: 16,
+                          color: JeevanSutraColors.freshLeaf,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -760,7 +931,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
-                                    color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+                                    color: isDark
+                                        ? JeevanSutraColors.darkTextPrimary
+                                        : JeevanSutraColors.forestGreen,
                                   ),
                                 ),
                                 TextSpan(
@@ -780,9 +953,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           onTap: () => setState(() => _mindfulnessMinutes += 5),
                           borderRadius: BorderRadius.circular(6),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
-                              color: isDark ? JeevanSutraColors.darkCanvas : JeevanSutraColors.softSage,
+                              color: isDark
+                                  ? JeevanSutraColors.darkCanvas
+                                  : JeevanSutraColors.softSage,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: const Text(
@@ -800,7 +978,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 4),
                     const Text(
                       "Goal: 20 mins/day",
-                      style: TextStyle(fontSize: 9.5, color: JeevanSutraColors.freshLeaf, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        color: JeevanSutraColors.freshLeaf,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -825,9 +1007,15 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+        color: isDark
+            ? JeevanSutraColors.darkSurface
+            : JeevanSutraColors.pureWhite,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
+        border: Border.all(
+          color: isDark
+              ? JeevanSutraColors.darkBorder
+              : JeevanSutraColors.subtleBorder,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -840,7 +1028,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                    color: isDark
+                        ? JeevanSutraColors.darkTextSecondary
+                        : JeevanSutraColors.secondaryText,
                   ),
                 ),
               ),
@@ -856,7 +1046,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+                    color: isDark
+                        ? JeevanSutraColors.darkTextPrimary
+                        : JeevanSutraColors.forestGreen,
                   ),
                 ),
                 if (unit.isNotEmpty)
@@ -864,7 +1056,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     text: unit,
                     style: TextStyle(
                       fontSize: 10,
-                      color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                      color: isDark
+                          ? JeevanSutraColors.darkTextSecondary
+                          : JeevanSutraColors.secondaryText,
                     ),
                   ),
               ],
@@ -873,7 +1067,11 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 4),
           Text(
             caption,
-            style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: captionColor),
+            style: TextStyle(
+              fontSize: 9.5,
+              fontWeight: FontWeight.w600,
+              color: captionColor,
+            ),
           ),
         ],
       ),
@@ -889,16 +1087,29 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark ? JeevanSutraColors.darkSurfaceElevated : JeevanSutraColors.softSage,
+          color: isDark
+              ? JeevanSutraColors.darkSurfaceElevated
+              : JeevanSutraColors.softSage,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
+          border: Border.all(
+            color: isDark
+                ? JeevanSutraColors.darkBorder
+                : JeevanSutraColors.subtleBorder,
+          ),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: JeevanSutraColors.forestGreen, borderRadius: BorderRadius.circular(14)),
-              child: const Icon(Icons.air_rounded, color: Colors.white, size: 22),
+              decoration: BoxDecoration(
+                color: JeevanSutraColors.forestGreen,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.air_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -920,9 +1131,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 1.5,
+                        ),
                         decoration: BoxDecoration(
-                          color: JeevanSutraColors.freshLeaf.withValues(alpha: 0.3),
+                          color: JeevanSutraColors.freshLeaf.withValues(
+                            alpha: 0.3,
+                          ),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Text(
@@ -942,14 +1158,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 13.5,
-                      color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.mainText,
+                      color: isDark
+                          ? JeevanSutraColors.darkTextPrimary
+                          : JeevanSutraColors.mainText,
                     ),
                   ),
                   Text(
                     "Box breathing & 4-7-8 vagal nerve calming guide with timer",
                     style: TextStyle(
                       fontSize: 11,
-                      color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                      color: isDark
+                          ? JeevanSutraColors.darkTextSecondary
+                          : JeevanSutraColors.secondaryText,
                     ),
                   ),
                 ],
@@ -957,8 +1177,15 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             Container(
               padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(color: JeevanSutraColors.freshLeaf, borderRadius: BorderRadius.circular(10)),
-              child: const Icon(Icons.arrow_forward_rounded, size: 14, color: JeevanSutraColors.deepBotanical),
+              decoration: BoxDecoration(
+                color: JeevanSutraColors.freshLeaf,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.arrow_forward_rounded,
+                size: 14,
+                color: JeevanSutraColors.deepBotanical,
+              ),
             ),
           ],
         ),
@@ -970,14 +1197,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildDinacharyaSection(bool isDark) {
     final previewItems = _routines.take(4).toList();
-    final progress = _routines.isEmpty ? 0.0 : _completedCount / _routines.length;
+    final progress = _routines.isEmpty
+        ? 0.0
+        : _completedCount / _routines.length;
 
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+        color: isDark
+            ? JeevanSutraColors.darkSurface
+            : JeevanSutraColors.pureWhite,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
+        border: Border.all(
+          color: isDark
+              ? JeevanSutraColors.darkBorder
+              : JeevanSutraColors.subtleBorder,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -996,7 +1231,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+                      color: isDark
+                          ? JeevanSutraColors.darkTextPrimary
+                          : JeevanSutraColors.forestGreen,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -1004,7 +1241,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     "$_completedCount of ${_routines.length} completed (${(progress * 100).round()}%)",
                     style: TextStyle(
                       fontSize: 11,
-                      color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                      color: isDark
+                          ? JeevanSutraColors.darkTextSecondary
+                          : JeevanSutraColors.secondaryText,
                     ),
                   ),
                 ],
@@ -1023,7 +1262,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                        color: isDark
+                            ? JeevanSutraColors.freshLeaf
+                            : JeevanSutraColors.forestGreen,
                       ),
                     ),
                     const Icon(Icons.chevron_right_rounded, size: 16),
@@ -1038,9 +1279,13 @@ class _HomeScreenState extends State<HomeScreen> {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 6,
-              backgroundColor: isDark ? JeevanSutraColors.darkCanvas : JeevanSutraColors.softSage,
+              backgroundColor: isDark
+                  ? JeevanSutraColors.darkCanvas
+                  : JeevanSutraColors.softSage,
               valueColor: AlwaysStoppedAnimation<Color>(
-                isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                isDark
+                    ? JeevanSutraColors.freshLeaf
+                    : JeevanSutraColors.forestGreen,
               ),
             ),
           ),
@@ -1058,10 +1303,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Row(
                   children: [
                     Icon(
-                      item.isCompleted ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                      item.isCompleted
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked_rounded,
                       color: item.isCompleted
-                          ? (isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen)
-                          : (isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText),
+                          ? (isDark
+                                ? JeevanSutraColors.freshLeaf
+                                : JeevanSutraColors.forestGreen)
+                          : (isDark
+                                ? JeevanSutraColors.darkTextSecondary
+                                : JeevanSutraColors.secondaryText),
                       size: 20,
                     ),
                     const SizedBox(width: 10),
@@ -1074,26 +1325,39 @@ class _HomeScreenState extends State<HomeScreen> {
                             style: TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
-                              decoration: item.isCompleted ? TextDecoration.lineThrough : null,
+                              decoration: item.isCompleted
+                                  ? TextDecoration.lineThrough
+                                  : null,
                               color: item.isCompleted
-                                  ? (isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText)
-                                  : (isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.mainText),
+                                  ? (isDark
+                                        ? JeevanSutraColors.darkTextSecondary
+                                        : JeevanSutraColors.secondaryText)
+                                  : (isDark
+                                        ? JeevanSutraColors.darkTextPrimary
+                                        : JeevanSutraColors.mainText),
                             ),
                           ),
                           Text(
                             "${item.time} • ${item.sanskritName}",
                             style: TextStyle(
                               fontSize: 10.5,
-                              color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                              color: isDark
+                                  ? JeevanSutraColors.darkTextSecondary
+                                  : JeevanSutraColors.secondaryText,
                             ),
                           ),
                         ],
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
-                        color: isDark ? JeevanSutraColors.darkCanvas : JeevanSutraColors.warmIvory,
+                        color: isDark
+                            ? JeevanSutraColors.darkCanvas
+                            : JeevanSutraColors.warmIvory,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -1101,7 +1365,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                          color: isDark
+                              ? JeevanSutraColors.freshLeaf
+                              : JeevanSutraColors.forestGreen,
                         ),
                       ),
                     ),
@@ -1119,12 +1385,36 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildPillarsGrid(bool isDark) {
     final pillars = [
-      {'title': 'Ayurveda & Wisdom', 'screen': const ExploreScreen(), 'icon': Icons.auto_awesome_rounded},
-      {'title': 'Nutrition & Diet', 'screen': const DietScreen(), 'icon': Icons.restaurant_menu_rounded},
-      {'title': 'Yoga & Meditation', 'screen': const YogaScreen(), 'icon': Icons.self_improvement_rounded},
-      {'title': 'Medicinal Plants', 'screen': const MedicinalPlantsScreen(), 'icon': Icons.eco_rounded},
-      {'title': 'Circadian Routine', 'screen': const DinacharyaScreen(), 'icon': Icons.schedule_rounded},
-      {'title': 'Seasonal Wellness', 'screen': const RitucharyaScreen(), 'icon': Icons.explore_rounded},
+      {
+        'title': 'Ayurveda & Wisdom',
+        'screen': const ExploreScreen(),
+        'icon': Icons.auto_awesome_rounded,
+      },
+      {
+        'title': 'Nutrition & Diet',
+        'screen': const DietScreen(),
+        'icon': Icons.restaurant_menu_rounded,
+      },
+      {
+        'title': 'Yoga & Meditation',
+        'screen': const YogaScreen(),
+        'icon': Icons.self_improvement_rounded,
+      },
+      {
+        'title': 'Medicinal Plants',
+        'screen': const MedicinalPlantsScreen(),
+        'icon': Icons.eco_rounded,
+      },
+      {
+        'title': 'Circadian Routine',
+        'screen': const DinacharyaScreen(),
+        'icon': Icons.schedule_rounded,
+      },
+      {
+        'title': 'Seasonal Wellness',
+        'screen': const RitucharyaScreen(),
+        'icon': Icons.explore_rounded,
+      },
     ];
 
     return Column(
@@ -1142,14 +1432,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 fontSize: 10.5,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1.1,
-                color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                color: isDark
+                    ? JeevanSutraColors.freshLeaf
+                    : JeevanSutraColors.forestGreen,
               ),
             ),
             Text(
               "6 Domains",
               style: TextStyle(
                 fontSize: 11,
-                color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                color: isDark
+                    ? JeevanSutraColors.darkTextSecondary
+                    : JeevanSutraColors.secondaryText,
               ),
             ),
           ],
@@ -1176,9 +1470,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+                      color: isDark
+                          ? JeevanSutraColors.darkSurface
+                          : JeevanSutraColors.pureWhite,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
+                      border: Border.all(
+                        color: isDark
+                            ? JeevanSutraColors.darkBorder
+                            : JeevanSutraColors.subtleBorder,
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1187,13 +1487,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: isDark ? JeevanSutraColors.darkCanvas : JeevanSutraColors.softSage,
+                            color: isDark
+                                ? JeevanSutraColors.darkCanvas
+                                : JeevanSutraColors.softSage,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
                             p['icon'] as IconData,
                             size: 18,
-                            color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                            color: isDark
+                                ? JeevanSutraColors.freshLeaf
+                                : JeevanSutraColors.forestGreen,
                           ),
                         ),
                         Row(
@@ -1205,14 +1509,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                 style: TextStyle(
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.bold,
-                                  color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.mainText,
+                                  color: isDark
+                                      ? JeevanSutraColors.darkTextPrimary
+                                      : JeevanSutraColors.mainText,
                                 ),
                               ),
                             ),
                             Icon(
                               Icons.arrow_forward_ios_rounded,
                               size: 11,
-                              color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                              color: isDark
+                                  ? JeevanSutraColors.darkTextSecondary
+                                  : JeevanSutraColors.secondaryText,
                             ),
                           ],
                         ),
@@ -1249,18 +1557,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 fontSize: 10.5,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1.1,
-                color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                color: isDark
+                    ? JeevanSutraColors.freshLeaf
+                    : JeevanSutraColors.forestGreen,
               ),
             ),
             TextButton(
               onPressed: () => _navigateTo(const KnowledgeLibraryScreen()),
-              style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero),
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+              ),
               child: Text(
                 "View All",
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
-                  color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                  color: isDark
+                      ? JeevanSutraColors.freshLeaf
+                      : JeevanSutraColors.forestGreen,
                 ),
               ),
             ),
@@ -1275,9 +1590,15 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+              color: isDark
+                  ? JeevanSutraColors.darkSurface
+                  : JeevanSutraColors.pureWhite,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
+              border: Border.all(
+                color: isDark
+                    ? JeevanSutraColors.darkBorder
+                    : JeevanSutraColors.subtleBorder,
+              ),
             ),
             child: Row(
               children: [
@@ -1298,12 +1619,20 @@ class _HomeScreenState extends State<HomeScreen> {
                               color: JeevanSutraColors.mutedGold,
                             ),
                           ),
-                          const Text(" • ", style: TextStyle(color: JeevanSutraColors.secondaryText, fontSize: 10)),
+                          const Text(
+                            " • ",
+                            style: TextStyle(
+                              color: JeevanSutraColors.secondaryText,
+                              fontSize: 10,
+                            ),
+                          ),
                           Text(
                             "${article.readingTimeMinutes} min read",
                             style: TextStyle(
                               fontSize: 10,
-                              color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                              color: isDark
+                                  ? JeevanSutraColors.darkTextSecondary
+                                  : JeevanSutraColors.secondaryText,
                             ),
                           ),
                         ],
@@ -1314,7 +1643,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.mainText,
+                          color: isDark
+                              ? JeevanSutraColors.darkTextPrimary
+                              : JeevanSutraColors.mainText,
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -1324,7 +1655,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 11,
-                          color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                          color: isDark
+                              ? JeevanSutraColors.darkTextSecondary
+                              : JeevanSutraColors.secondaryText,
                         ),
                       ),
                     ],
@@ -1334,13 +1667,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: isDark ? JeevanSutraColors.darkCanvas : JeevanSutraColors.softSage,
+                    color: isDark
+                        ? JeevanSutraColors.darkCanvas
+                        : JeevanSutraColors.softSage,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     Icons.arrow_forward_rounded,
                     size: 16,
-                    color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                    color: isDark
+                        ? JeevanSutraColors.freshLeaf
+                        : JeevanSutraColors.forestGreen,
                   ),
                 ),
               ],
@@ -1356,9 +1693,15 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+              color: isDark
+                  ? JeevanSutraColors.darkSurface
+                  : JeevanSutraColors.pureWhite,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
+              border: Border.all(
+                color: isDark
+                    ? JeevanSutraColors.darkBorder
+                    : JeevanSutraColors.subtleBorder,
+              ),
             ),
             child: Row(
               children: [
@@ -1379,12 +1722,20 @@ class _HomeScreenState extends State<HomeScreen> {
                               color: JeevanSutraColors.freshLeaf,
                             ),
                           ),
-                          const Text(" • ", style: TextStyle(color: JeevanSutraColors.secondaryText, fontSize: 10)),
+                          const Text(
+                            " • ",
+                            style: TextStyle(
+                              color: JeevanSutraColors.secondaryText,
+                              fontSize: 10,
+                            ),
+                          ),
                           Text(
                             plant.category,
                             style: TextStyle(
                               fontSize: 10,
-                              color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                              color: isDark
+                                  ? JeevanSutraColors.darkTextSecondary
+                                  : JeevanSutraColors.secondaryText,
                             ),
                           ),
                         ],
@@ -1395,7 +1746,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.mainText,
+                          color: isDark
+                              ? JeevanSutraColors.darkTextPrimary
+                              : JeevanSutraColors.mainText,
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -1405,7 +1758,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 11,
-                          color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                          color: isDark
+                              ? JeevanSutraColors.darkTextSecondary
+                              : JeevanSutraColors.secondaryText,
                         ),
                       ),
                     ],
@@ -1415,13 +1770,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: isDark ? JeevanSutraColors.darkCanvas : JeevanSutraColors.softSage,
+                    color: isDark
+                        ? JeevanSutraColors.darkCanvas
+                        : JeevanSutraColors.softSage,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     Icons.arrow_forward_rounded,
                     size: 16,
-                    color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                    color: isDark
+                        ? JeevanSutraColors.freshLeaf
+                        : JeevanSutraColors.forestGreen,
                   ),
                 ),
               ],

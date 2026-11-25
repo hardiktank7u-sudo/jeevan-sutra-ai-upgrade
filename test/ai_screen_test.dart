@@ -1,87 +1,122 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jeevan_sutra/screens/ai_screen.dart';
+import 'package:jeevan_sutra/services/local_storage_service.dart';
 import 'package:jeevan_sutra/theme/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets(
-    'reset cancels an active reply and accepts a fresh conversation',
-    (tester) async {
-      final responses = <StreamController<String>>[];
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: JeevanSutraTheme.lightTheme,
-          home: AiScreen(
-            responseBuilder: ({required prompt, required conversationHistory}) {
-              final controller = StreamController<String>();
-              responses.add(controller);
-              return controller.stream;
-            },
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), 'First question');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 350));
-      expect(responses, hasLength(1));
+  testWidgets('answers plant questions offline and restores chat history', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(theme: JeevanSutraTheme.lightTheme, home: const AiScreen()),
+    );
+    await tester.pumpAndSettle();
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(seconds: 1)),
+    );
+    await tester.pump();
 
-      responses.first.add('Partial answer');
-      await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Reset Conversation'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Reset'));
-      await tester.pumpAndSettle();
+    expect(
+      find.textContaining('92 bundled plant records are ready offline'),
+      findsOneWidget,
+    );
+    await tester.enterText(find.byType(TextField), 'What family is Tulsi?');
+    await tester.tap(find.byIcon(Icons.send_rounded));
+    await tester.pumpAndSettle();
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 300)),
+    );
+    await tester.pump();
 
-      // A late reply used to append to _messages.last after Reset cleared it.
-      responses.first.add(' late text from cancelled request');
-      unawaited(responses.first.close());
-      await tester.pumpAndSettle();
-      expect(find.textContaining('Partial answer'), findsNothing);
-      expect(tester.takeException(), isNull);
+    expect(find.textContaining('Lamiaceae'), findsOneWidget);
+    expect(find.textContaining('No Gemini service is used'), findsOneWidget);
+    expect((await LocalStorageService.instance.getChatHistory()), hasLength(2));
 
-      await tester.enterText(find.byType(TextField), 'Fresh question');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 350));
-      expect(responses, hasLength(2));
-      responses.last.add('Fresh answer');
-      unawaited(responses.last.close());
-      await tester.pumpAndSettle();
-      expect(find.text('Fresh answer'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-      await tester.pumpWidget(const SizedBox.shrink());
-    },
-  );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(
+      MaterialApp(theme: JeevanSutraTheme.lightTheme, home: const AiScreen()),
+    );
+    await tester.pumpAndSettle();
 
-  testWidgets('a failed reply ends loading and allows a retry', (tester) async {
-    var requestCount = 0;
+    expect(find.text('What family is Tulsi?'), findsOneWidget);
+    expect(find.textContaining('Lamiaceae'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('reset clears persisted chat history', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(theme: JeevanSutraTheme.lightTheme, home: const AiScreen()),
+    );
+    await tester.pumpAndSettle();
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(seconds: 1)),
+    );
+    await tester.pump();
+    expect(
+      find.textContaining('92 bundled plant records are ready offline'),
+      findsOneWidget,
+    );
+    await tester.enterText(find.byType(TextField), 'How do I identify Neem?');
+    await tester.tap(find.byIcon(Icons.send_rounded));
+    await tester.pumpAndSettle();
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 300)),
+    );
+    await tester.pump();
+    tester.testTextInput.hide();
+    await tester.pump();
+    expect(find.text('How do I identify Neem?'), findsOneWidget);
+    expect((await LocalStorageService.instance.getChatHistory()), hasLength(2));
+
+    final resetButton = find.ancestor(
+      of: find.byIcon(Icons.refresh_rounded),
+      matching: find.byType(IconButton),
+    );
+    tester.widget<IconButton>(resetButton).onPressed!.call();
+    await tester.pumpAndSettle();
+    expect(find.text('Start New Conversation?'), findsOneWidget);
+    await tester.tap(find.text('Reset'));
+    await tester.pumpAndSettle();
+
+    expect(await LocalStorageService.instance.getChatHistory(), isEmpty);
+    expect(find.text('How do I identify Neem?'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('renders live online Gemini response when available', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: JeevanSutraTheme.lightTheme,
         home: AiScreen(
-          responseBuilder: ({required prompt, required conversationHistory}) {
-            requestCount++;
-            return Stream<String>.error(TimeoutException('unavailable'));
+          responseBuilder: ({
+            required prompt,
+            required conversationHistory,
+          }) async* {
+            yield 'Ayurveda emphasizes balancing the doshas.';
+            yield ' Ritucharya guides seasonal routines.';
           },
         ),
       ),
     );
     await tester.pumpAndSettle();
-    for (var attempt = 0; attempt < 2; attempt++) {
-      await tester.enterText(find.byType(TextField), 'Retry $attempt');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
-      await tester.pumpAndSettle();
-    }
-    expect(requestCount, 2);
-    expect(find.textContaining('took too long'), findsWidgets);
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.enterText(find.byType(TextField), 'Tell me about Ritucharya');
+    await tester.tap(find.byIcon(Icons.send_rounded));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining(
+        'Ayurveda emphasizes balancing the doshas. Ritucharya guides seasonal routines.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('No Gemini service is used'), findsNothing);
+    expect((await LocalStorageService.instance.getChatHistory()), hasLength(2));
   });
 }

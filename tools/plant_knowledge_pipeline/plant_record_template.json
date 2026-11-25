@@ -1,0 +1,43 @@
+{
+  "id": "genus-species-stable-slug",
+  "commonName": "",
+  "sanskritName": null,
+  "hindiName": null,
+  "scientificName": "Genus species Author",
+  "family": "",
+  "category": "",
+  "organismType": "plant",
+  "identification": "",
+  "growingInformation": null,
+  "partsUsed": [],
+  "traditionalReferences": [],
+  "traditionalUses": [],
+  "scientificEvidence": [],
+  "knownCompounds": [],
+  "evidenceLevel": "not_assessed",
+  "evidenceLimitations": [],
+  "safetySummary": "",
+  "precautions": [],
+  "lookAlikes": [],
+  "isToxic": null,
+  "toxicityWarning": null,
+  "sources": [],
+  "sourceDetails": [
+    {
+      "id": "source-id",
+      "title": "Exact source title",
+      "authors": null,
+      "organization": "",
+      "year": null,
+      "sourceType": "taxonomy",
+      "supports": "Taxonomic identity and family",
+      "doi": null,
+      "url": "https://"
+    }
+  ],
+  "reviewStatus": "draft",
+  "reviewedBy": null,
+  "reviewDate": null,
+  "contentVersion": "1.0",
+  "keywords": []
+}

@@ -14,22 +14,56 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends State<SettingsScreen>
+    with WidgetsBindingObserver {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _goalController = TextEditingController();
 
-  bool _notifications = true;
+  bool _notifications = false;
+  TimeOfDay _reminderTime = const TimeOfDay(hour: 6, minute: 0);
   bool _loading = true;
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadSettings();
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshPermissionState();
+    }
+  }
+
+  Future<void> _refreshPermissionState() async {
+    if (!await LocalStorageService.instance.getNotificationsEnabled()) {
+      if (mounted) setState(() => _notifications = false);
+      return;
+    }
+    final granted = await NotificationService.instance
+        .areNotificationsEnabled();
+    if (!granted) {
+      await LocalStorageService.instance.saveNotificationsEnabled(false);
+      await NotificationService.instance.cancelAll();
+      if (mounted) {
+        setState(() => _notifications = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Notifications were turned off in Android Settings. Enable them there, then enable reminders again in this app.',
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _nameController.dispose();
     _goalController.dispose();
     super.dispose();
@@ -40,12 +74,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final name = await storage.getProfileName();
     final goal = await storage.getProfileGoal();
     final notifications = await storage.getNotificationsEnabled();
+    final reminderHour = await storage.getNotificationHour();
+    final reminderMinute = await storage.getNotificationMinute();
+    var notificationEnabled = notifications;
+    if (notificationEnabled) {
+      final granted = await NotificationService.instance
+          .areNotificationsEnabled();
+      if (!granted) {
+        notificationEnabled = false;
+        await storage.saveNotificationsEnabled(false);
+        await NotificationService.instance.cancelAll();
+      }
+    }
 
     if (!mounted) return;
     setState(() {
       _nameController.text = name;
       _goalController.text = goal;
-      _notifications = notifications;
+      _notifications = notificationEnabled;
+      _reminderTime = TimeOfDay(hour: reminderHour, minute: reminderMinute);
       _loading = false;
     });
   }
@@ -66,9 +113,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await storage.saveProfileName(name);
     await storage.saveProfileGoal(goal);
     await storage.saveNotificationsEnabled(_notifications);
+    await storage.saveNotificationTime(
+      _reminderTime.hour,
+      _reminderTime.minute,
+    );
 
+    var notificationSucceeded = true;
     if (_notifications) {
-      await NotificationService.instance.scheduleDinacharyaReminders();
+      final granted = await NotificationService.instance
+          .areNotificationsEnabled();
+      if (!granted) {
+        notificationSucceeded = false;
+      } else {
+        notificationSucceeded = await NotificationService.instance
+            .scheduleDinacharyaReminders(
+              hour: _reminderTime.hour,
+              minute: _reminderTime.minute,
+              requestPermissionIfNeeded: false,
+            );
+      }
+      if (!notificationSucceeded) {
+        _notifications = false;
+        await storage.saveNotificationsEnabled(false);
+        await NotificationService.instance.cancelAll();
+      }
     } else {
       await NotificationService.instance.cancelAll();
     }
@@ -76,8 +144,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!mounted) return;
     setState(() => _saving = false);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Settings saved successfully.')),
+      SnackBar(
+        content: Text(
+          notificationSucceeded ? 'Settings saved successfully.' : 'Notifications are unavailable. Reminders remain disabled. Enable notification permission in Android Settings, then try again.',
+        ),
+      ),
     );
+  }
+
+  Future<void> _onReminderToggle(bool enabled) async {
+    final storage = LocalStorageService.instance;
+    if (!enabled) {
+      setState(() => _notifications = false);
+      await storage.saveNotificationsEnabled(false);
+      await NotificationService.instance.cancelAll();
+      return;
+    }
+
+    final granted = await NotificationService.instance.requestPermission();
+    if (!granted) {
+      await storage.saveNotificationsEnabled(false);
+      await NotificationService.instance.cancelAll();
+      if (mounted) {
+        setState(() => _notifications = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Notification permission denied. Reminders remain disabled. Enable them in Android Settings > Apps > Jeevan Sutra > Notifications.',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    await storage.saveNotificationTime(
+      _reminderTime.hour,
+      _reminderTime.minute,
+    );
+    final scheduled = await NotificationService.instance
+        .scheduleDinacharyaReminders(
+          hour: _reminderTime.hour,
+          minute: _reminderTime.minute,
+          requestPermissionIfNeeded: false,
+        );
+    if (scheduled) {
+      await storage.saveNotificationsEnabled(true);
+      if (mounted) setState(() => _notifications = true);
+    } else {
+      await storage.saveNotificationsEnabled(false);
+      await NotificationService.instance.cancelAll();
+      if (mounted) {
+        setState(() => _notifications = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Reminder scheduling failed. Reminders remain disabled.',
+            ),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _clearAllData() async {
@@ -361,9 +488,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               value: _notifications,
               activeThumbColor: JeevanSutraColors.forestGreen,
-              onChanged: (val) => setState(() => _notifications = val),
+              onChanged: (val) => _onReminderToggle(val),
             ),
           ),
+          if (_notifications) ...[
+            const Divider(),
+            Material(
+              color: Colors.transparent,
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text(
+                  'Daily reminder time',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  _reminderTime.format(context),
+                  style: const TextStyle(fontSize: 11),
+                ),
+                trailing: const Icon(Icons.schedule_rounded),
+                onTap: () async {
+                  final selected = await showTimePicker(
+                    context: context,
+                    initialTime: _reminderTime,
+                  );
+                  if (selected != null && mounted) {
+                    setState(() => _reminderTime = selected);
+                  }
+                },
+              ),
+            ),
+          ],
         ],
       ),
     );

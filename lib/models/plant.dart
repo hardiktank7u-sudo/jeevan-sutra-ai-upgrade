@@ -10,6 +10,8 @@ class Plant {
   final String scientificName;
   final String family;
   final String category;
+  final String? medicinalClassification;
+  final String? growingInformation;
   final String? imageAsset;
   final String identification;
   final List<String> partsUsed;
@@ -22,8 +24,10 @@ class Plant {
   final String safetySummary;
   final List<String> precautions;
   final List<String> lookAlikes;
-  final bool isToxic;
+  final bool? isToxic;
   final String? toxicityWarning;
+  final String organismType;
+  final double? confidence;
   final List<String> sources;
   final List<PlantReference> sourceDetails;
   final String reviewStatus;
@@ -33,12 +37,16 @@ class Plant {
   final List<String> keywords;
 
   String get botanicalName => scientificName;
-  String? get taste => traditionalReferences.isNotEmpty ? traditionalReferences.first : null;
-  String? get potency => knownCompounds.isNotEmpty ? knownCompounds.first : null;
+  String? get taste =>
+      traditionalReferences.isNotEmpty ? traditionalReferences.first : null;
+  String? get potency =>
+      knownCompounds.isNotEmpty ? knownCompounds.first : null;
   String? get postDigestiveEffect => evidenceLevel;
   String? get doshaImpact => keywords.isNotEmpty ? keywords.first : null;
-  String? get primaryUses => traditionalUses.isNotEmpty ? traditionalUses.join(', ') : null;
-  String? get contraindications => precautions.isNotEmpty ? precautions.join(', ') : null;
+  String? get primaryUses =>
+      traditionalUses.isNotEmpty ? traditionalUses.join(', ') : null;
+  String? get contraindications =>
+      precautions.isNotEmpty ? precautions.join(', ') : null;
   String? get botanicalFamily => family;
 
   const Plant({
@@ -49,6 +57,8 @@ class Plant {
     required this.scientificName,
     this.family = '',
     this.category = 'General',
+    this.medicinalClassification,
+    this.growingInformation,
     this.imageAsset,
     this.identification = '',
     this.partsUsed = const [],
@@ -61,8 +71,10 @@ class Plant {
     this.safetySummary = '',
     this.precautions = const [],
     this.lookAlikes = const [],
-    this.isToxic = false,
+    this.isToxic,
     this.toxicityWarning,
+    this.organismType = 'plant',
+    this.confidence,
     this.sources = const [],
     this.sourceDetails = const [],
     this.reviewStatus = 'draft',
@@ -81,6 +93,8 @@ class Plant {
       scientificName: json['scientificName'] as String,
       family: json['family'] as String? ?? '',
       category: json['category'] as String? ?? 'General',
+      medicinalClassification: json['medicinalClassification'] as String?,
+      growingInformation: json['growingInformation'] as String?,
       imageAsset: json['imageAsset'] as String?,
       identification: json['identification'] as String? ?? '',
       partsUsed: _stringList(json['partsUsed']),
@@ -93,15 +107,17 @@ class Plant {
       safetySummary: json['safetySummary'] as String? ?? '',
       precautions: _stringList(json['precautions']),
       lookAlikes: _stringList(json['lookAlikes']),
-      isToxic: json['isToxic'] as bool? ?? false,
+      isToxic: json['isToxic'] as bool?,
       toxicityWarning: json['toxicityWarning'] as String?,
+      organismType: json['organismType'] as String? ?? 'plant',
+      confidence: (json['confidence'] as num?)?.toDouble(),
       sources: _stringList(json['sources']),
-      sourceDetails: (json['sourceDetails'] as List?)
+      sourceDetails:
+          (json['sourceDetails'] as List?)
               ?.whereType<Map>()
               .map(
-                (item) => PlantReference.fromJson(
-                  Map<String, dynamic>.from(item),
-                ),
+                (item) =>
+                    PlantReference.fromJson(Map<String, dynamic>.from(item)),
               )
               .toList() ??
           const [],
@@ -114,36 +130,46 @@ class Plant {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'commonName': commonName,
-        'sanskritName': sanskritName,
-        'hindiName': hindiName,
-        'scientificName': scientificName,
-        'family': family,
-        'category': category,
-        'imageAsset': imageAsset,
-        'identification': identification,
-        'partsUsed': partsUsed,
-        'traditionalReferences': traditionalReferences,
-        'traditionalUses': traditionalUses,
-        'scientificEvidence': scientificEvidence,
-        'knownCompounds': knownCompounds,
-        'evidenceLevel': evidenceLevel,
-        'evidenceLimitations': evidenceLimitations,
-        'safetySummary': safetySummary,
-        'precautions': precautions,
-        'lookAlikes': lookAlikes,
+    'id': id,
+    'commonName': commonName,
+    'sanskritName': sanskritName,
+    'hindiName': hindiName,
+    'scientificName': scientificName,
+    'family': family,
+    'category': category,
+    'medicinalClassification': medicinalClassification,
+    'growingInformation': growingInformation,
+    'imageAsset': imageAsset,
+    'identification': identification,
+    'partsUsed': partsUsed,
+    'traditionalReferences': traditionalReferences,
+    'traditionalUses': traditionalUses,
+    'scientificEvidence': scientificEvidence,
+    'knownCompounds': knownCompounds,
+    'evidenceLevel': evidenceLevel,
+    'evidenceLimitations': evidenceLimitations,
+    'safetySummary': safetySummary,
+    'precautions': precautions,
+    'lookAlikes': lookAlikes,
+    'isToxic': isToxic,
+    'toxicityWarning': toxicityWarning,
+    'organismType': organismType,
+    'confidence': confidence,
+    'sources': sources,
+    'sourceDetails': sourceDetails.map((source) => source.toJson()).toList(),
+    'reviewStatus': reviewStatus,
+    'reviewedBy': reviewedBy,
+    'reviewDate': reviewDate,
+    'contentVersion': contentVersion,
+    'keywords': keywords,
+  };
+
+  Plant copyWithToxicity({required bool? isToxic, String? toxicityWarning}) =>
+      Plant.fromJson({
+        ...toJson(),
         'isToxic': isToxic,
         'toxicityWarning': toxicityWarning,
-        'sources': sources,
-        'sourceDetails':
-            sourceDetails.map((source) => source.toJson()).toList(),
-        'reviewStatus': reviewStatus,
-        'reviewedBy': reviewedBy,
-        'reviewDate': reviewDate,
-        'contentVersion': contentVersion,
-        'keywords': keywords,
-      };
+      });
 
   static List<String> _stringList(dynamic value) {
     if (value is! List) return const [];
@@ -190,14 +216,14 @@ class PlantReference {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'authors': authors,
-        'organization': organization,
-        'year': year,
-        'sourceType': sourceType,
-        'supports': supports,
-        'doi': doi,
-        'url': url,
-      };
+    'id': id,
+    'title': title,
+    'authors': authors,
+    'organization': organization,
+    'year': year,
+    'sourceType': sourceType,
+    'supports': supports,
+    'doi': doi,
+    'url': url,
+  };
 }

@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "C:/"
+		}
+	],
+	"settings": {
+		"powershell.cwd": "jeevan_sutra"
+	}
+}

@@ -9,10 +9,7 @@ import '../widgets/botanical_background.dart';
 class PlantDetailScreen extends StatefulWidget {
   final Plant plant;
 
-  const PlantDetailScreen({
-    super.key,
-    required this.plant,
-  });
+  const PlantDetailScreen({super.key, required this.plant});
 
   /// Convenience constructor from a [MedicinalPlant] (wellness_models).
   factory PlantDetailScreen.fromMedicinalPlant(MedicinalPlant mp, {Key? key}) {
@@ -28,7 +25,9 @@ class PlantDetailScreen extends StatefulWidget {
       scientificEvidence: [mp.scientificEvidence],
       safetySummary: mp.precautions,
       precautions: [mp.precautions],
-      knownCompounds: ['${mp.rasa} (rasa) • ${mp.virya} (virya) • ${mp.vipaka} (vipaka)'],
+      knownCompounds: [
+        '${mp.rasa} (rasa) • ${mp.virya} (virya) • ${mp.vipaka} (vipaka)',
+      ],
     );
     return PlantDetailScreen(key: key, plant: plant);
   }
@@ -46,6 +45,7 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
   bool _loadingSavedState = true;
 
   Plant get plant => widget.plant;
+  bool get _isUnverifiedAiScan => plant.reviewStatus == 'ai_scan_unverified';
 
   final List<String> _tabs = const [
     'Overview',
@@ -170,7 +170,9 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
             ),
           ),
           _CircleIconButton(
-            icon: _saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+            icon: _saved
+                ? Icons.bookmark_rounded
+                : Icons.bookmark_border_rounded,
             iconColor: _saved ? AppTheme.gold : context.detailSecondaryText,
             onTap: _loadingSavedState ? null : _toggleSaved,
           ),
@@ -186,11 +188,7 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFF0E281C),
-            Color(0xFF183D2A),
-            Color(0xFF24573C),
-          ],
+          colors: [Color(0xFF0E281C), Color(0xFF183D2A), Color(0xFF24573C)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -266,7 +264,9 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: AppTheme.gold.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(20),
@@ -316,13 +316,9 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
                     runSpacing: 6,
                     children: [
                       if (plant.sanskritName != null)
-                        _HeroTagPill(
-                          label: 'Sanskrit: ${plant.sanskritName}',
-                        ),
+                        _HeroTagPill(label: 'Sanskrit: ${plant.sanskritName}'),
                       if (plant.hindiName != null)
-                        _HeroTagPill(
-                          label: 'Hindi: ${plant.hindiName}',
-                        ),
+                        _HeroTagPill(label: 'Hindi: ${plant.hindiName}'),
                     ],
                   ),
                 ],
@@ -391,13 +387,20 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
           icon: Icons.local_florist_rounded,
           child: Column(
             children: [
-              _DarkInfoRow(label: 'Scientific Name', value: plant.scientificName, italic: true),
+              _DarkInfoRow(
+                label: 'Scientific Name',
+                value: plant.scientificName,
+                italic: true,
+              ),
               if (plant.family.isNotEmpty)
                 _DarkInfoRow(label: 'Botanical Family', value: plant.family),
               if (plant.category.isNotEmpty)
                 _DarkInfoRow(label: 'Ayurvedic Class', value: plant.category),
               if (plant.partsUsed.isNotEmpty)
-                _DarkListPills(title: 'Parts Traditionally Used', items: plant.partsUsed),
+                _DarkListPills(
+                  title: 'Parts Traditionally Used',
+                  items: plant.partsUsed,
+                ),
             ],
           ),
         ),
@@ -423,11 +426,16 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: AppTheme.emerald.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.emerald.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: AppTheme.emerald.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Text(
                   _formatStatus(plant.evidenceLevel),
@@ -464,15 +472,31 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
       children: [
         _DarkCard(
-          title: 'Researched Benefits & Evidence',
+          title: _isUnverifiedAiScan
+              ? 'AI-Reported Evidence (Unverified)'
+              : 'Researched Benefits & Evidence',
           icon: Icons.science_rounded,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (_isUnverifiedAiScan) ...[
+                Text(
+                  'This AI-generated summary has not been independently verified and is not medical advice.',
+                  style: TextStyle(
+                    color: context.detailSecondaryText,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               if (plant.scientificEvidence.isEmpty)
                 Text(
                   'Scientific research data is being verified for this record.',
-                  style: TextStyle(color: context.detailSecondaryText, fontSize: 13),
+                  style: TextStyle(
+                    color: context.detailSecondaryText,
+                    fontSize: 13,
+                  ),
                 )
               else
                 ...plant.scientificEvidence.map(
@@ -483,7 +507,11 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
                       children: [
                         const Padding(
                           padding: EdgeInsets.only(top: 6),
-                          child: Icon(Icons.circle, size: 6, color: AppTheme.gold),
+                          child: Icon(
+                            Icons.circle,
+                            size: 6,
+                            color: AppTheme.gold,
+                          ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
@@ -513,7 +541,10 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
               runSpacing: 8,
               children: plant.knownCompounds.map((compound) {
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: context.detailInsetSurface,
                     borderRadius: BorderRadius.circular(14),
@@ -544,15 +575,31 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
       children: [
         _DarkCard(
-          title: 'Traditional Ayurvedic Uses',
+          title: _isUnverifiedAiScan
+              ? 'AI-Reported Traditional Uses (Unverified)'
+              : 'Traditional Ayurvedic Uses',
           icon: Icons.history_edu_rounded,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (_isUnverifiedAiScan) ...[
+                Text(
+                  'Traditional descriptions are unverified and do not establish safety or effectiveness. Do not consume or use based only on this scan.',
+                  style: TextStyle(
+                    color: context.detailSecondaryText,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               if (plant.traditionalUses.isEmpty)
                 Text(
                   'Traditional applications are being curated from classical texts.',
-                  style: TextStyle(color: context.detailSecondaryText, fontSize: 13),
+                  style: TextStyle(
+                    color: context.detailSecondaryText,
+                    fontSize: 13,
+                  ),
                 )
               else
                 ...plant.traditionalUses.map(
@@ -568,7 +615,11 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.spa_rounded, color: AppTheme.gold, size: 18),
+                          const Icon(
+                            Icons.spa_rounded,
+                            color: AppTheme.gold,
+                            size: 18,
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
@@ -601,8 +652,11 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.bookmark_border_rounded,
-                          color: AppTheme.goldLight, size: 16),
+                      const Icon(
+                        Icons.bookmark_border_rounded,
+                        color: AppTheme.goldLight,
+                        size: 16,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -632,23 +686,28 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
       children: [
-        if (plant.isToxic || plant.toxicityWarning != null) ...[
+        if (plant.isToxic == true || plant.toxicityWarning != null) ...[
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: const Color(0xFF2E1515),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFE57373).withValues(alpha: 0.4)),
+              border: Border.all(
+                color: const Color(0xFFE57373).withValues(alpha: 0.4),
+              ),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.warning_amber_rounded, color: Color(0xFFE57373), size: 24),
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  color: Color(0xFFE57373),
+                  size: 24,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    plant.toxicityWarning ??
-                        'Caution: This botanical specimen contains potent compounds. Do not ingest without medical supervision.',
+                    plant.toxicityWarning ?? 'Caution: This botanical specimen contains potent compounds. Do not ingest without medical supervision.',
                     style: const TextStyle(
                       color: Color(0xFFFFCDD2),
                       fontSize: 13,
@@ -686,8 +745,11 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.check_circle_outline_rounded,
-                            size: 16, color: AppTheme.gold),
+                        const Icon(
+                          Icons.check_circle_outline_rounded,
+                          size: 16,
+                          color: AppTheme.gold,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -706,7 +768,10 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
               else
                 Text(
                   'No adverse interaction precautions currently recorded.',
-                  style: TextStyle(color: context.detailSecondaryText, fontSize: 13),
+                  style: TextStyle(
+                    color: context.detailSecondaryText,
+                    fontSize: 13,
+                  ),
                 ),
             ],
           ),
@@ -760,7 +825,9 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
               ),
             ),
             icon: Icon(
-              _saved ? Icons.bookmark_added_rounded : Icons.bookmark_add_rounded,
+              _saved
+                  ? Icons.bookmark_added_rounded
+                  : Icons.bookmark_add_rounded,
               color: _saved ? AppTheme.gold : const Color(0xFF141004),
               size: 22,
             ),
@@ -791,7 +858,11 @@ class _PlantDetailScreenState extends State<PlantDetailScreen>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline_rounded, color: AppTheme.gold, size: 20),
+          const Icon(
+            Icons.info_outline_rounded,
+            color: AppTheme.gold,
+            size: 20,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -853,7 +924,10 @@ class _TabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return tabBar;
   }
 
@@ -1042,10 +1116,7 @@ class _DarkListPills extends StatelessWidget {
   final String title;
   final List<String> items;
 
-  const _DarkListPills({
-    required this.title,
-    required this.items,
-  });
+  const _DarkListPills({required this.title, required this.items});
 
   @override
   Widget build(BuildContext context) {
@@ -1093,13 +1164,11 @@ class _DarkListPills extends StatelessWidget {
 extension _PlantDetailColors on BuildContext {
   Color get detailText => Theme.of(this).colorScheme.onSurface;
 
-  Color get detailSecondaryText =>
-      Theme.of(this).brightness == Brightness.dark
-          ? JeevanSutraColors.darkTextSecondary
-          : JeevanSutraColors.secondaryText;
+  Color get detailSecondaryText => Theme.of(this).brightness == Brightness.dark
+      ? JeevanSutraColors.darkTextSecondary
+      : JeevanSutraColors.secondaryText;
 
-  Color get detailInsetSurface =>
-      Theme.of(this).brightness == Brightness.dark
-          ? JeevanSutraColors.darkSurfaceElevated
-          : JeevanSutraColors.softSage;
+  Color get detailInsetSurface => Theme.of(this).brightness == Brightness.dark
+      ? JeevanSutraColors.darkSurfaceElevated
+      : JeevanSutraColors.softSage;
 }

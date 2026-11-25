@@ -1,5 +1,7 @@
 // Jeevan Sutra - Living Intelligence Production Application Entry Point
 // Integrating Google AI Studio Design System with Firebase, AI Services & Local Storage
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/foundation.dart';
@@ -24,6 +26,7 @@ import 'screens/ritucharya_screen.dart';
 import 'screens/scanner_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/yoga_screen.dart';
+import 'services/live_audit_service.dart';
 import 'services/local_storage_service.dart';
 import 'services/notification_service.dart';
 import 'splash/jeevan_sutra_splash.dart';
@@ -40,6 +43,16 @@ Future<void> main() async {
   if (kIsWeb) {
     if (kDebugMode) {
       await FirebaseAppCheck.instance.activate(providerWeb: WebDebugProvider());
+      debugPrint(
+        '[JEEVAN SUTRA LIVE] Firebase initialized and App Check activated.',
+      );
+      try {
+        final token = await FirebaseAppCheck.instance.getToken();
+        final status = token != null && token.isNotEmpty ? 'SUCCESS' : 'NONE';
+        debugPrint('[JEEVAN SUTRA LIVE] App Check token acquired: $status');
+      } catch (e) {
+        debugPrint('[JEEVAN SUTRA LIVE] App Check token check: $e');
+      }
     } else {
       const siteKey = String.fromEnvironment('APP_CHECK_RECAPTCHA_V3_SITE_KEY');
       if (siteKey.isEmpty) {
@@ -57,10 +70,40 @@ Future<void> main() async {
           ? const AndroidDebugProvider()
           : const AndroidPlayIntegrityProvider(),
     );
+    if (kDebugMode && defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        final token = await FirebaseAppCheck.instance.getToken(true);
+        final status = token == null || token.isEmpty
+            ? 'unavailable'
+            : 'acquired';
+        debugPrint('JEEVAN_APP_CHECK_JWT: $status (value redacted)');
+        unawaited(LiveAuditService.instance.runLiveAudit());
+      } catch (error) {
+        debugPrint(
+          'JEEVAN_APP_CHECK_JWT: retrieval failed (${error.runtimeType})',
+        );
+      }
+    }
   }
 
   // Initialize local notifications channel
   await NotificationService.instance.init();
+  if (await LocalStorageService.instance.getNotificationsEnabled()) {
+    final permissionGranted = await NotificationService.instance
+        .areNotificationsEnabled();
+    if (!permissionGranted) {
+      await LocalStorageService.instance.saveNotificationsEnabled(false);
+      await NotificationService.instance.cancelAll();
+    } else {
+      final hour = await LocalStorageService.instance.getNotificationHour();
+      final minute = await LocalStorageService.instance.getNotificationMinute();
+      await NotificationService.instance.scheduleDinacharyaReminders(
+        hour: hour,
+        minute: minute,
+        requestPermissionIfNeeded: false,
+      );
+    }
+  }
 
   runApp(const JeevanSutraApp());
 }
@@ -72,8 +115,34 @@ class JeevanSutraApp extends StatefulWidget {
   State<JeevanSutraApp> createState() => _JeevanSutraAppState();
 }
 
-class _JeevanSutraAppState extends State<JeevanSutraApp> {
+class _JeevanSutraAppState extends State<JeevanSutraApp>
+    with WidgetsBindingObserver {
   bool _isDarkMode = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state != AppLifecycleState.resumed) return;
+    final storage = LocalStorageService.instance;
+    if (!await storage.getNotificationsEnabled()) return;
+    final permissionGranted = await NotificationService.instance
+        .areNotificationsEnabled();
+    if (!permissionGranted) {
+      await storage.saveNotificationsEnabled(false);
+      await NotificationService.instance.cancelAll();
+    }
+  }
 
   void _toggleTheme() {
     setState(() {

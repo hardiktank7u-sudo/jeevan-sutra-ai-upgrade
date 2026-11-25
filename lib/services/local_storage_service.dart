@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/plant.dart';
+
 class LocalStorageService {
   LocalStorageService._();
 
@@ -11,9 +13,14 @@ class LocalStorageService {
   static const String _profileGoalKey = 'profile_goal';
   static const String _savedWisdomKey = 'saved_wisdom';
   static const String _savedPlantsKey = 'saved_plants';
+  static const String _savedPlantRecordsKey = 'saved_plant_records';
   static const String _scanHistoryKey = 'scan_history';
   static const String _chatHistoryKey = 'chat_history';
   static const String _notificationsKey = 'notifications_enabled';
+  static const String _notificationPreferenceInitializedKey =
+      'notification_preference_initialized';
+  static const String _notificationHourKey = 'notification_hour';
+  static const String _notificationMinuteKey = 'notification_minute';
   static const String _firstLaunchKey = 'first_launch_complete';
   static const String _geminiApiKey = 'gemini_api_key';
   static const String _doshaKey = 'user_dosha';
@@ -34,49 +41,87 @@ class LocalStorageService {
   static const String _routineLastCompletedDateKey =
       'routine_last_completed_date';
   static const String _shownMilestonesKey = 'routine_shown_milestones';
+  static const String _routineCompletedDatesKey = 'routine_completed_dates';
 
-  Future<int> getStreak() async {
+  static String _localDateKey(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+
+  Future<int> getNotificationHour() async =>
+      (await _prefs).getInt(_notificationHourKey) ?? 6;
+
+  Future<int> getNotificationMinute() async =>
+      (await _prefs).getInt(_notificationMinuteKey) ?? 0;
+
+  Future<void> saveNotificationTime(int hour, int minute) async {
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return;
     final prefs = await _prefs;
+    await prefs.setInt(_notificationHourKey, hour);
+    await prefs.setInt(_notificationMinuteKey, minute);
+  }
+
+  Future<int> getStreak({DateTime? now}) async {
+    final prefs = await _prefs;
+    final today = now == null
+        ? DateTime.now()
+        : DateTime(now.year, now.month, now.day);
+    final completedDates =
+        prefs.getStringList(_routineCompletedDatesKey) ?? <String>[];
+    if (completedDates.isNotEmpty) {
+      var cursor = DateTime(today.year, today.month, today.day);
+      if (!completedDates.contains(_localDateKey(cursor))) {
+        cursor = cursor.subtract(const Duration(days: 1));
+        if (!completedDates.contains(_localDateKey(cursor))) return 0;
+      }
+      var streak = 0;
+      while (completedDates.contains(_localDateKey(cursor))) {
+        streak++;
+        cursor = cursor.subtract(const Duration(days: 1));
+      }
+      return streak;
+    }
+
     final lastDate = prefs.getString(_routineLastCompletedDateKey);
     if (lastDate == null) return 0;
-
-    final now = DateTime.now();
-    final today = now.toIso8601String().substring(0, 10);
-    final yesterday =
-        now.subtract(const Duration(days: 1)).toIso8601String().substring(0, 10);
-
-    if (lastDate != today && lastDate != yesterday) return 0;
+    final todayKey = _localDateKey(today);
+    final yesterdayKey = _localDateKey(today.subtract(const Duration(days: 1)));
+    if (lastDate != todayKey && lastDate != yesterdayKey) return 0;
     return prefs.getInt(_routineStreakKey) ?? 0;
   }
 
-  Future<int?> recordRoutineCompletionIfComplete() async {
+  Future<int?> recordRoutineCompletionIfComplete({
+    DateTime? now,
+    Set<String>? requiredHabits,
+  }) async {
     final prefs = await _prefs;
-    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final current = now == null
+        ? DateTime.now()
+        : DateTime(now.year, now.month, now.day);
+    final today = _localDateKey(current);
 
-    const requiredHabits = <String>{
+    const legacyRequiredHabits = <String>{
       'ushapan',
       'tongue_scrape',
       'pranayama',
       'mindful_meal',
       'evening_unwind',
     };
+    final required = requiredHabits ?? legacyRequiredHabits;
 
     final completed =
         prefs.getStringList('$_dinacharyaTasksKeyPrefix$today') ?? <String>[];
-    if (!requiredHabits.every(completed.contains)) return null;
+    if (!required.every(completed.contains)) return null;
 
-    final lastDate = prefs.getString(_routineLastCompletedDateKey);
-    if (lastDate == today) return null;
+    final completedDates =
+        prefs.getStringList(_routineCompletedDatesKey) ?? <String>[];
+    if (completedDates.contains(today)) return null;
+    completedDates.insert(0, today);
+    await prefs.setStringList(_routineCompletedDatesKey, completedDates);
 
-    final yesterday = DateTime.now()
-        .subtract(const Duration(days: 1))
-        .toIso8601String()
-        .substring(0, 10);
-    final previousStreak = prefs.getInt(_routineStreakKey) ?? 0;
-    final nextStreak = lastDate == yesterday ? previousStreak + 1 : 1;
-
-    await prefs.setInt(_routineStreakKey, nextStreak);
     await prefs.setString(_routineLastCompletedDateKey, today);
+    final nextStreak = await getStreak(now: current);
+    await prefs.setInt(_routineStreakKey, nextStreak);
     return nextStreak;
   }
 
@@ -92,6 +137,7 @@ class LocalStorageService {
     await prefs.setStringList(_shownMilestonesKey, shown);
     return true;
   }
+
   Future<void> recordDailyActive() async {
     final prefs = await _prefs;
     final today = DateTime.now().toIso8601String().substring(0, 10);
@@ -120,13 +166,25 @@ class LocalStorageService {
 
   Future<List<String>> getDinacharyaCompletedToday() async {
     final prefs = await _prefs;
-    final today = DateTime.now().toIso8601String().substring(0, 10);
-    return prefs.getStringList('$_dinacharyaTasksKeyPrefix$today') ?? <String>[];
+    final today = _localDateKey(DateTime.now());
+    return prefs.getStringList('$_dinacharyaTasksKeyPrefix$today') ??
+        <String>[];
   }
 
-  Future<void> toggleDinacharyaTaskToday(String taskId) async {
+  Future<List<String>> getDinacharyaCompletedOn(DateTime date) async {
     final prefs = await _prefs;
-    final today = DateTime.now().toIso8601String().substring(0, 10);
+    return prefs.getStringList(
+          '$_dinacharyaTasksKeyPrefix${_localDateKey(date)}',
+        ) ??
+        <String>[];
+  }
+
+  Future<void> toggleDinacharyaTaskToday(String taskId, {DateTime? now}) async {
+    final prefs = await _prefs;
+    final current = now == null
+        ? DateTime.now()
+        : DateTime(now.year, now.month, now.day);
+    final today = _localDateKey(current);
     final key = '$_dinacharyaTasksKeyPrefix$today';
     final list = prefs.getStringList(key) ?? <String>[];
     if (list.contains(taskId)) {
@@ -163,15 +221,92 @@ class LocalStorageService {
 
   Future<void> saveProfile({required String name, required String goal}) async {
     final prefs = await _prefs;
-    await prefs.setString(_profileNameKey, name.trim().isEmpty ? 'Wellness Explorer' : name.trim());
-    await prefs.setString(_profileGoalKey, goal.trim().isEmpty ? 'Build mindful daily habits' : goal.trim());
+    await prefs.setString(
+      _profileNameKey,
+      name.trim().isEmpty ? 'Wellness Explorer' : name.trim(),
+    );
+    await prefs.setString(
+      _profileGoalKey,
+      goal.trim().isEmpty ? 'Build mindful daily habits' : goal.trim(),
+    );
   }
 
-  Future<List<String>> getSavedWisdom() async => _getStringList(_savedWisdomKey);
-  Future<List<String>> getSavedPlants() async => _getStringList(_savedPlantsKey);
+  Future<List<String>> getSavedWisdom() async =>
+      _getStringList(_savedWisdomKey);
+  Future<List<String>> getSavedPlants() async {
+    final prefs = await _prefs;
+    final names = prefs.getStringList(_savedPlantsKey) ?? <String>[];
+    final records = await getSavedPlantRecords();
+    for (final plant in records) {
+      if (plant.organismType != 'plant') continue;
+      if (plant.confidence != null && plant.confidence! < 0.6) continue;
+      if (!names.contains(plant.commonName)) {
+        names.insert(0, plant.commonName);
+      }
+    }
+    return names;
+  }
 
-  Future<void> toggleSavedWisdom(String title) async => _toggleString(_savedWisdomKey, title);
-  Future<void> toggleSavedPlant(String title) async => _toggleString(_savedPlantsKey, title);
+  Future<void> toggleSavedWisdom(String title) async =>
+      _toggleString(_savedWisdomKey, title);
+  Future<void> toggleSavedPlant(String title) async {
+    await _toggleString(_savedPlantsKey, title);
+    final prefs = await _prefs;
+    final raw = prefs.getStringList(_savedPlantRecordsKey) ?? <String>[];
+    final remaining = <String>[];
+    for (final item in raw) {
+      try {
+        final decoded = Map<String, dynamic>.from(jsonDecode(item) as Map);
+        if (decoded['commonName']?.toString() != title) remaining.add(item);
+      } catch (_) {
+        remaining.add(item);
+      }
+    }
+    await prefs.setStringList(_savedPlantRecordsKey, remaining);
+  }
+
+  Future<void> savePlantRecord(Plant plant) async {
+    final isConfirmedPlant =
+        plant.organismType == 'plant' &&
+        (plant.confidence == null || plant.confidence! >= 0.6);
+    if (isConfirmedPlant) await savePlant(plant.commonName);
+    final prefs = await _prefs;
+    final raw = prefs.getStringList(_savedPlantRecordsKey) ?? <String>[];
+    final records = <String>[];
+    var replaced = false;
+    for (final item in raw) {
+      try {
+        final decoded = Map<String, dynamic>.from(jsonDecode(item) as Map);
+        if (decoded['commonName']?.toString() == plant.commonName ||
+            decoded['id']?.toString() == plant.id) {
+          records.insert(0, jsonEncode(plant.toJson()));
+          replaced = true;
+        } else {
+          records.add(item);
+        }
+      } catch (_) {
+        records.add(item);
+      }
+    }
+    if (!replaced) records.insert(0, jsonEncode(plant.toJson()));
+    await prefs.setStringList(_savedPlantRecordsKey, records);
+  }
+
+  Future<List<Plant>> getSavedPlantRecords() async {
+    final prefs = await _prefs;
+    final raw = prefs.getStringList(_savedPlantRecordsKey) ?? <String>[];
+    final plants = <Plant>[];
+    for (final item in raw) {
+      try {
+        final decoded = Map<String, dynamic>.from(jsonDecode(item) as Map);
+        final requiredName = decoded['commonName']?.toString();
+        final requiredScientificName = decoded['scientificName']?.toString();
+        if (requiredName == null || requiredScientificName == null) continue;
+        plants.add(Plant.fromJson(decoded));
+      } catch (_) {}
+    }
+    return plants;
+  }
 
   Future<List<Map<String, dynamic>>> getScanHistory() async {
     final prefs = await _prefs;
@@ -181,17 +316,52 @@ class LocalStorageService {
         final decoded = jsonDecode(item);
         return Map<String, dynamic>.from(decoded as Map);
       } catch (_) {
-        return <String, dynamic>{'name': item, 'time': DateTime.now().toIso8601String()};
+        return <String, dynamic>{
+          'name': item,
+          'time': DateTime.now().toIso8601String(),
+        };
       }
     }).toList();
   }
 
-  Future<void> addScanHistory({required String fileName}) async {
+  Future<void> addScanHistory({
+    required String fileName,
+    String? plantName,
+    double? confidence,
+    Map<String, dynamic>? scanResult,
+  }) async {
     final prefs = await _prefs;
     final raw = prefs.getStringList(_scanHistoryKey) ?? <String>[];
+    if (raw.isNotEmpty &&
+        ((plantName != null && plantName.isNotEmpty) || scanResult != null)) {
+      try {
+        final top = Map<String, dynamic>.from(jsonDecode(raw.first) as Map);
+        if (top['fileName'] == fileName &&
+            (top['plantName'] == null || top['schemaVersion'] == null)) {
+          top['name'] =
+              plantName ?? scanResult?['plantName']?.toString() ?? top['name'];
+          top['plantName'] = plantName ?? scanResult?['plantName'];
+          if (confidence != null) top['confidence'] = confidence;
+          if (scanResult != null) top.addAll(scanResult);
+          if (scanResult != null) top['schemaVersion'] = 2;
+          raw[0] = jsonEncode(top);
+          await prefs.setStringList(_scanHistoryKey, raw);
+          return;
+        }
+      } catch (_) {}
+    }
+
     final entry = jsonEncode(<String, dynamic>{
-      'name': fileName,
+      'schemaVersion': scanResult == null ? null : 2,
+      'name': plantName != null && plantName.isNotEmpty
+          ? plantName
+          : scanResult?['plantName']?.toString() ?? fileName,
+      'fileName': fileName,
+      'plantName': plantName ?? scanResult?['plantName'],
+      'confidence': confidence,
       'time': DateTime.now().toIso8601String(),
+      'timestamp': DateTime.now().toIso8601String(),
+      ...?scanResult,
     });
     raw.insert(0, entry);
     if (raw.length > 20) {
@@ -219,24 +389,40 @@ class LocalStorageService {
 
   Future<void> saveChatHistory(List<Map<String, dynamic>> messages) async {
     final prefs = await _prefs;
-    final trimmed = messages.length > 40 ? messages.sublist(messages.length - 40) : messages;
+    final trimmed = messages.length > 40
+        ? messages.sublist(messages.length - 40)
+        : messages;
     await prefs.setStringList(
       _chatHistoryKey,
       trimmed.map(jsonEncode).toList(),
     );
   }
 
-    Future<void> clearChatHistory() async {
+  Future<void> clearChatHistory() async {
     final prefs = await _prefs;
     await prefs.remove(_chatHistoryKey);
   }
-Future<bool> getNotificationsEnabled() async {
+
+  Future<bool> getNotificationsEnabled() async {
     final prefs = await _prefs;
-    return prefs.getBool(_notificationsKey) ?? true;
+    if (prefs.containsKey(_notificationPreferenceInitializedKey)) {
+      return prefs.getBool(_notificationsKey) ?? false;
+    }
+    // Backward compatibility: preserve an explicitly saved legacy preference.
+    if (prefs.containsKey(_notificationsKey)) {
+      final legacyValue = prefs.getBool(_notificationsKey) ?? false;
+      await prefs.setBool(_notificationPreferenceInitializedKey, true);
+      return legacyValue;
+    }
+    // Genuinely new installations start disabled.
+    await prefs.setBool(_notificationPreferenceInitializedKey, true);
+    await prefs.setBool(_notificationsKey, false);
+    return false;
   }
 
   Future<void> setNotificationsEnabled(bool enabled) async {
     final prefs = await _prefs;
+    await prefs.setBool(_notificationPreferenceInitializedKey, true);
     await prefs.setBool(_notificationsKey, enabled);
   }
 
@@ -300,6 +486,17 @@ Future<bool> getNotificationsEnabled() async {
     final list = prefs.getStringList(_savedPlantsKey) ?? <String>[];
     list.remove(name);
     await prefs.setStringList(_savedPlantsKey, list);
+    final raw = prefs.getStringList(_savedPlantRecordsKey) ?? <String>[];
+    final remaining = <String>[];
+    for (final item in raw) {
+      try {
+        final decoded = Map<String, dynamic>.from(jsonDecode(item) as Map);
+        if (decoded['commonName']?.toString() != name) remaining.add(item);
+      } catch (_) {
+        remaining.add(item);
+      }
+    }
+    await prefs.setStringList(_savedPlantRecordsKey, remaining);
   }
 
   // ─── Completed habits (dinacharya / profile) ─────────────────────────────
@@ -319,6 +516,21 @@ Future<bool> getNotificationsEnabled() async {
     await prefs.setStringList(_completedHabitsKey, habits);
   }
 
+  Future<void> saveCompletedHabitsForDate(
+    List<String> habits, {
+    DateTime? now,
+  }) async {
+    final prefs = await _prefs;
+    final current = now == null
+        ? DateTime.now()
+        : DateTime(now.year, now.month, now.day);
+    await prefs.setStringList(
+      '$_dinacharyaTasksKeyPrefix${_localDateKey(current)}',
+      habits.toSet().toList(),
+    );
+    await prefs.setStringList(_completedHabitsKey, habits.toSet().toList());
+  }
+
   // ─── Clear all user data ──────────────────────────────────────────────────
 
   /// Clears ALL locally stored personal data including streaks and settings.
@@ -334,8 +546,17 @@ Future<bool> getNotificationsEnabled() async {
       _profileGoalKey,
       _savedWisdomKey,
       _savedPlantsKey,
+      _savedPlantRecordsKey,
       _scanHistoryKey,
       _chatHistoryKey,
+      _notificationsKey,
+      _notificationPreferenceInitializedKey,
+      _notificationHourKey,
+      _notificationMinuteKey,
+      _routineStreakKey,
+      _routineLastCompletedDateKey,
+      _routineCompletedDatesKey,
+      _shownMilestonesKey,
     ]) {
       await prefs.remove(key);
     }

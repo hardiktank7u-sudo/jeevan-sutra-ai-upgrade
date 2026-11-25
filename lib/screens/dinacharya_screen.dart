@@ -23,12 +23,26 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
   @override
   void initState() {
     super.initState();
-    _routines = SampleData.dailyRoutines;
+    _routines = SampleData.dailyRoutines
+        .map(
+          (routine) => RoutineItem(
+            id: routine.id,
+            title: routine.title,
+            sanskritName: routine.sanskritName,
+            time: routine.time,
+            period: routine.period,
+            description: routine.description,
+            benefits: routine.benefits,
+            balancingDosha: routine.balancingDosha,
+          ),
+        )
+        .toList();
     _loadSavedState();
   }
 
   Future<void> _loadSavedState() async {
-    final completed = await LocalStorageService.instance.getCompletedHabits();
+    final completed = await LocalStorageService.instance
+        .getDinacharyaCompletedToday();
     if (!mounted) return;
     if (completed.isNotEmpty) {
       setState(() {
@@ -42,18 +56,35 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
   }
 
   Future<void> _toggleRoutine(RoutineItem item) async {
-    setState(() {
-      item.isCompleted = !item.isCompleted;
-    });
-    final completedIds = _routines.where((r) => r.isCompleted).map((r) => r.id).toList();
-    await LocalStorageService.instance.saveCompletedHabits(completedIds);
-    if (completedIds.length == _routines.length) {
-      if (mounted) MilestoneCelebrationDialog.show(context, 7);
+    setState(() => item.isCompleted = !item.isCompleted);
+    final completedIds = _routines
+        .where((r) => r.isCompleted)
+        .map((r) => r.id)
+        .toList();
+    await LocalStorageService.instance.saveCompletedHabitsForDate(completedIds);
+    if (completedIds.length != _routines.length) return;
+
+    final streak = await LocalStorageService.instance
+        .recordRoutineCompletionIfComplete(
+          requiredHabits: _routines.map((routine) => routine.id).toSet(),
+        );
+    if (!mounted || streak == null) return;
+    for (final milestone in const [7, 30]) {
+      if (streak >= milestone) {
+        final awarded = await LocalStorageService.instance.markMilestoneShown(
+          milestone,
+        );
+        if (awarded && mounted) {
+          await MilestoneCelebrationDialog.show(context, milestone);
+          break;
+        }
+      }
     }
   }
 
   int get _completedCount => _routines.where((r) => r.isCompleted).length;
-  double get _progress => _routines.isEmpty ? 0.0 : _completedCount / _routines.length;
+  double get _progress =>
+      _routines.isEmpty ? 0.0 : _completedCount / _routines.length;
 
   final List<Map<String, dynamic>> _periods = [
     {
@@ -108,7 +139,9 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
                 _buildProgressCard(isDark),
                 const SizedBox(height: 20),
                 ..._periods.map((period) {
-                  final periodItems = _routines.where((r) => r.period == period['key']).toList();
+                  final periodItems = _routines
+                      .where((r) => r.period == period['key'])
+                      .toList();
                   if (periodItems.isEmpty) return const SizedBox.shrink();
                   return _buildPeriodSection(period, periodItems, isDark);
                 }),
@@ -131,7 +164,9 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
             Icon(
               Icons.schedule_rounded,
               size: 14,
-              color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+              color: isDark
+                  ? JeevanSutraColors.freshLeaf
+                  : JeevanSutraColors.forestGreen,
             ),
             const SizedBox(width: 6),
             Text(
@@ -140,7 +175,9 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.1,
-                color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                color: isDark
+                    ? JeevanSutraColors.freshLeaf
+                    : JeevanSutraColors.forestGreen,
               ),
             ),
           ],
@@ -152,7 +189,9 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
             fontSize: 24,
             fontWeight: FontWeight.bold,
             letterSpacing: -0.3,
-            color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+            color: isDark
+                ? JeevanSutraColors.darkTextPrimary
+                : JeevanSutraColors.forestGreen,
           ),
         ),
         const SizedBox(height: 2),
@@ -160,7 +199,9 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
           "Synchronize biological rhythms with natural light cues according to Charaka Samhita.",
           style: TextStyle(
             fontSize: 12,
-            color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+            color: isDark
+                ? JeevanSutraColors.darkTextSecondary
+                : JeevanSutraColors.secondaryText,
           ),
         ),
       ],
@@ -173,10 +214,14 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+        color: isDark
+            ? JeevanSutraColors.darkSurface
+            : JeevanSutraColors.pureWhite,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
+          color: isDark
+              ? JeevanSutraColors.darkBorder
+              : JeevanSutraColors.subtleBorder,
         ),
         boxShadow: [
           BoxShadow(
@@ -199,7 +244,9 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
                     style: TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w600,
-                      color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                      color: isDark
+                          ? JeevanSutraColors.darkTextSecondary
+                          : JeevanSutraColors.secondaryText,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -208,7 +255,9 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+                      color: isDark
+                          ? JeevanSutraColors.darkTextPrimary
+                          : JeevanSutraColors.forestGreen,
                     ),
                   ),
                 ],
@@ -217,7 +266,9 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: isDark ? JeevanSutraColors.darkCanvas : JeevanSutraColors.softSage,
+                  color: isDark
+                      ? JeevanSutraColors.darkCanvas
+                      : JeevanSutraColors.softSage,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Center(
@@ -226,7 +277,9 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
-                      color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                      color: isDark
+                          ? JeevanSutraColors.freshLeaf
+                          : JeevanSutraColors.forestGreen,
                     ),
                   ),
                 ),
@@ -239,9 +292,13 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
             child: LinearProgressIndicator(
               value: _progress,
               minHeight: 8,
-              backgroundColor: isDark ? JeevanSutraColors.darkCanvas : JeevanSutraColors.softSage,
+              backgroundColor: isDark
+                  ? JeevanSutraColors.darkCanvas
+                  : JeevanSutraColors.softSage,
               valueColor: AlwaysStoppedAnimation<Color>(
-                isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                isDark
+                    ? JeevanSutraColors.freshLeaf
+                    : JeevanSutraColors.forestGreen,
               ),
             ),
           ),
@@ -252,7 +309,11 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
 
   // ─── Period Section with Vertical Timeline ─────────────────────────────────
 
-  Widget _buildPeriodSection(Map<String, dynamic> period, List<RoutineItem> items, bool isDark) {
+  Widget _buildPeriodSection(
+    Map<String, dynamic> period,
+    List<RoutineItem> items,
+    bool isDark,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Column(
@@ -260,7 +321,11 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
         children: [
           Row(
             children: [
-              Icon(period['icon'] as IconData, size: 16, color: period['color'] as Color),
+              Icon(
+                period['icon'] as IconData,
+                size: 16,
+                color: period['color'] as Color,
+              ),
               const SizedBox(width: 8),
               Text(
                 (period['label'] as String).toUpperCase(),
@@ -268,7 +333,9 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
                   fontSize: 10.5,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1.0,
-                  color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                  color: isDark
+                      ? JeevanSutraColors.freshLeaf
+                      : JeevanSutraColors.forestGreen,
                 ),
               ),
             ],
@@ -279,12 +346,16 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
               decoration: BoxDecoration(
-                color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+                color: isDark
+                    ? JeevanSutraColors.darkSurface
+                    : JeevanSutraColors.pureWhite,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: item.isCompleted
                       ? JeevanSutraColors.freshLeaf.withValues(alpha: 0.5)
-                      : (isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
+                      : (isDark
+                            ? JeevanSutraColors.darkBorder
+                            : JeevanSutraColors.subtleBorder),
                 ),
               ),
               child: Column(
@@ -297,10 +368,16 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
                       child: Row(
                         children: [
                           Icon(
-                            item.isCompleted ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                            item.isCompleted
+                                ? Icons.check_circle_rounded
+                                : Icons.radio_button_unchecked_rounded,
                             color: item.isCompleted
-                                ? (isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen)
-                                : (isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText),
+                                ? (isDark
+                                      ? JeevanSutraColors.freshLeaf
+                                      : JeevanSutraColors.forestGreen)
+                                : (isDark
+                                      ? JeevanSutraColors.darkTextSecondary
+                                      : JeevanSutraColors.secondaryText),
                             size: 22,
                           ),
                           const SizedBox(width: 12),
@@ -313,10 +390,18 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
-                                    decoration: item.isCompleted ? TextDecoration.lineThrough : null,
+                                    decoration: item.isCompleted
+                                        ? TextDecoration.lineThrough
+                                        : null,
                                     color: item.isCompleted
-                                        ? (isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText)
-                                        : (isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.mainText),
+                                        ? (isDark
+                                              ? JeevanSutraColors
+                                                    .darkTextSecondary
+                                              : JeevanSutraColors.secondaryText)
+                                        : (isDark
+                                              ? JeevanSutraColors
+                                                    .darkTextPrimary
+                                              : JeevanSutraColors.mainText),
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -324,16 +409,23 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
                                   "${item.time} • ${item.sanskritName}",
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                                    color: isDark
+                                        ? JeevanSutraColors.darkTextSecondary
+                                        : JeevanSutraColors.secondaryText,
                                   ),
                                 ),
                               ],
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
-                              color: isDark ? JeevanSutraColors.darkCanvas : JeevanSutraColors.warmIvory,
+                              color: isDark
+                                  ? JeevanSutraColors.darkCanvas
+                                  : JeevanSutraColors.warmIvory,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -341,7 +433,9 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
                               style: TextStyle(
                                 fontSize: 9.5,
                                 fontWeight: FontWeight.bold,
-                                color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                                color: isDark
+                                    ? JeevanSutraColors.freshLeaf
+                                    : JeevanSutraColors.forestGreen,
                               ),
                             ),
                           ),
@@ -353,9 +447,13 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
                               });
                             },
                             child: Icon(
-                              isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                              isExpanded
+                                  ? Icons.keyboard_arrow_up_rounded
+                                  : Icons.keyboard_arrow_down_rounded,
                               size: 20,
-                              color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                              color: isDark
+                                  ? JeevanSutraColors.darkTextSecondary
+                                  : JeevanSutraColors.secondaryText,
                             ),
                           ),
                         ],
@@ -375,13 +473,19 @@ class _DinacharyaScreenState extends State<DinacharyaScreen> {
                             style: TextStyle(
                               fontSize: 11.5,
                               height: 1.4,
-                              color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.mainText,
+                              color: isDark
+                                  ? JeevanSutraColors.darkTextPrimary
+                                  : JeevanSutraColors.mainText,
                             ),
                           ),
                           const SizedBox(height: 6),
                           Row(
                             children: [
-                              const Icon(Icons.spa_rounded, size: 14, color: JeevanSutraColors.mutedGold),
+                              const Icon(
+                                Icons.spa_rounded,
+                                size: 14,
+                                color: JeevanSutraColors.mutedGold,
+                              ),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(

@@ -1,0 +1,20 @@
+name = "jeevan-sutra-gemini-api"
+main = "index.js"
+compatibility_date = "2026-11-13"
+workers_dev = true
+
+[vars]
+FIREBASE_PROJECT_NUMBER = "311459879132"
+FIREBASE_APP_IDS = "1:311459879132:web:28f00c87263e428ab6fc19,1:311459879132:android:fd34669cd00b4c6cb6fc19,1:311459879132:ios:038126863dab5442b6fc19,1:311459879132:web:a67cac107f1817cfb6fc19"
+CORS_ALLOWED_ORIGINS = "https://jeevan-b390e.web.app,https://jeevan-b390e.firebaseapp.com"
+
+[[ratelimits]]
+name = "AI_RATE_LIMITER"
+namespace_id = "311459879132"
+
+  [ratelimits.simple]
+  limit = 20
+  period = 60
+
+[ai]
+binding = "AI"

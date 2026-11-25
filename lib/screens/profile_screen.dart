@@ -33,7 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _ageGroup = '25–34';
   String _dominantPrakriti = 'Pitta-Kapha';
   String _dietaryPreference = 'Sattvic & Plant-Forward';
-  int _streak = 7;
+  int _streak = 0;
 
   int _savedWisdomCount = 0;
   int _savedPlantsCount = 0;
@@ -122,7 +122,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _nameController.text = name;
       }
       if (dosha != null && dosha.isNotEmpty) _dominantPrakriti = dosha;
-      _streak = streak > 0 ? streak : 7;
+      _streak = streak;
       _savedWisdom = savedW;
       _savedPlants = savedP;
       _savedWisdomCount = savedW.length;
@@ -1115,7 +1115,9 @@ Format with clean, inspiring Markdown with bullet points.
           ),
           IconButton(
             icon: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-            onPressed: () => MilestoneCelebrationDialog.show(context, 7),
+            onPressed: _streak >= 7
+                ? () => MilestoneCelebrationDialog.show(context, 7)
+                : null,
           ),
         ],
       ),

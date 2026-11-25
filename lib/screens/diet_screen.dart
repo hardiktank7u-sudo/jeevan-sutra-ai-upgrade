@@ -19,8 +19,21 @@ class _DietScreenState extends State<DietScreen> {
   String _selectedDay = 'Today';
   String _selectedPreference = 'Sattvic';
 
-  final List<String> _days = ['Mon', 'Tue', 'Today', 'Thu', 'Fri', 'Sat', 'Sun'];
-  final List<String> _preferences = ['Sattvic', 'Tridoshic', 'Plant-Forward', 'Gluten-Free'];
+  final List<String> _days = [
+    'Mon',
+    'Tue',
+    'Today',
+    'Thu',
+    'Fri',
+    'Sat',
+    'Sun',
+  ];
+  final List<String> _preferences = [
+    'Sattvic',
+    'Tridoshic',
+    'Plant-Forward',
+    'Gluten-Free',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +87,9 @@ class _DietScreenState extends State<DietScreen> {
             Icon(
               Icons.restaurant_menu_rounded,
               size: 14,
-              color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+              color: isDark
+                  ? JeevanSutraColors.freshLeaf
+                  : JeevanSutraColors.forestGreen,
             ),
             const SizedBox(width: 6),
             Text(
@@ -83,7 +98,9 @@ class _DietScreenState extends State<DietScreen> {
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.1,
-                color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                color: isDark
+                    ? JeevanSutraColors.freshLeaf
+                    : JeevanSutraColors.forestGreen,
               ),
             ),
           ],
@@ -95,7 +112,9 @@ class _DietScreenState extends State<DietScreen> {
             fontSize: 24,
             fontWeight: FontWeight.bold,
             letterSpacing: -0.3,
-            color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+            color: isDark
+                ? JeevanSutraColors.darkTextPrimary
+                : JeevanSutraColors.forestGreen,
           ),
         ),
         const SizedBox(height: 2),
@@ -103,7 +122,9 @@ class _DietScreenState extends State<DietScreen> {
           "Nourish your metabolic fire (Jatharagni) according to classical Ahara Vidhi.",
           style: TextStyle(
             fontSize: 12,
-            color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+            color: isDark
+                ? JeevanSutraColors.darkTextSecondary
+                : JeevanSutraColors.secondaryText,
           ),
         ),
       ],
@@ -116,10 +137,14 @@ class _DietScreenState extends State<DietScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+        color: isDark
+            ? JeevanSutraColors.darkSurface
+            : JeevanSutraColors.pureWhite,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
+          color: isDark
+              ? JeevanSutraColors.darkBorder
+              : JeevanSutraColors.subtleBorder,
         ),
       ),
       child: Column(
@@ -130,14 +155,20 @@ class _DietScreenState extends State<DietScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.calendar_month_rounded, size: 16, color: JeevanSutraColors.forestGreen),
+                  const Icon(
+                    Icons.calendar_month_rounded,
+                    size: 16,
+                    color: JeevanSutraColors.forestGreen,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     "Weekly Ahara Schedule",
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.mainText,
+                      color: isDark
+                          ? JeevanSutraColors.darkTextPrimary
+                          : JeevanSutraColors.mainText,
                     ),
                   ),
                 ],
@@ -161,11 +192,18 @@ class _DietScreenState extends State<DietScreen> {
                 onTap: () => setState(() => _selectedDay = day),
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? (isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen)
-                        : (isDark ? JeevanSutraColors.darkCanvas : JeevanSutraColors.warmIvory),
+                        ? (isDark
+                              ? JeevanSutraColors.freshLeaf
+                              : JeevanSutraColors.forestGreen)
+                        : (isDark
+                              ? JeevanSutraColors.darkCanvas
+                              : JeevanSutraColors.warmIvory),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -175,7 +213,9 @@ class _DietScreenState extends State<DietScreen> {
                       fontWeight: FontWeight.bold,
                       color: isSelected
                           ? Colors.white
-                          : (isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText),
+                          : (isDark
+                                ? JeevanSutraColors.darkTextSecondary
+                                : JeevanSutraColors.secondaryText),
                     ),
                   ),
                 ),
@@ -195,10 +235,14 @@ class _DietScreenState extends State<DietScreen> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+        color: isDark
+            ? JeevanSutraColors.darkSurface
+            : JeevanSutraColors.pureWhite,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
+          color: isDark
+              ? JeevanSutraColors.darkBorder
+              : JeevanSutraColors.subtleBorder,
         ),
       ),
       child: Column(
@@ -215,7 +259,11 @@ class _DietScreenState extends State<DietScreen> {
                       color: const Color(0xFFE0F2FE),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.water_drop_rounded, size: 20, color: Color(0xFF0284C7)),
+                    child: const Icon(
+                      Icons.water_drop_rounded,
+                      size: 20,
+                      color: Color(0xFF0284C7),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Column(
@@ -226,14 +274,18 @@ class _DietScreenState extends State<DietScreen> {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+                          color: isDark
+                              ? JeevanSutraColors.darkTextPrimary
+                              : JeevanSutraColors.forestGreen,
                         ),
                       ),
                       Text(
                         "$_hydrationCups of 8 glasses (${_hydrationCups * 250} ml)",
                         style: TextStyle(
                           fontSize: 11,
-                          color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                          color: isDark
+                              ? JeevanSutraColors.darkTextSecondary
+                              : JeevanSutraColors.secondaryText,
                         ),
                       ),
                     ],
@@ -243,13 +295,20 @@ class _DietScreenState extends State<DietScreen> {
               Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.remove_circle_outline_rounded, size: 24),
+                    icon: const Icon(
+                      Icons.remove_circle_outline_rounded,
+                      size: 24,
+                    ),
                     onPressed: () {
                       if (_hydrationCups > 0) setState(() => _hydrationCups--);
                     },
                   ),
                   IconButton(
-                    icon: const Icon(Icons.add_circle_rounded, size: 28, color: JeevanSutraColors.forestGreen),
+                    icon: const Icon(
+                      Icons.add_circle_rounded,
+                      size: 28,
+                      color: JeevanSutraColors.forestGreen,
+                    ),
                     onPressed: () {
                       if (_hydrationCups < 12) setState(() => _hydrationCups++);
                     },
@@ -264,8 +323,12 @@ class _DietScreenState extends State<DietScreen> {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 6,
-              backgroundColor: isDark ? JeevanSutraColors.darkCanvas : JeevanSutraColors.softSage,
-              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0284C7)),
+              backgroundColor: isDark
+                  ? JeevanSutraColors.darkCanvas
+                  : JeevanSutraColors.softSage,
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                Color(0xFF0284C7),
+              ),
             ),
           ),
         ],
@@ -291,20 +354,28 @@ class _DietScreenState extends State<DietScreen> {
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                 color: isSelected
                     ? Colors.white
-                    : (isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.mainText),
+                    : (isDark
+                          ? JeevanSutraColors.darkTextSecondary
+                          : JeevanSutraColors.mainText),
               ),
               selected: isSelected,
               onSelected: (val) {
                 if (val) setState(() => _selectedPreference = pref);
               },
-              backgroundColor: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
-              selectedColor: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+              backgroundColor: isDark
+                  ? JeevanSutraColors.darkSurface
+                  : JeevanSutraColors.pureWhite,
+              selectedColor: isDark
+                  ? JeevanSutraColors.freshLeaf
+                  : JeevanSutraColors.forestGreen,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
                 side: BorderSide(
                   color: isSelected
                       ? Colors.transparent
-                      : (isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
+                      : (isDark
+                            ? JeevanSutraColors.darkBorder
+                            : JeevanSutraColors.subtleBorder),
                 ),
               ),
               showCheckmark: false,
@@ -327,7 +398,9 @@ class _DietScreenState extends State<DietScreen> {
             fontSize: 10.5,
             fontWeight: FontWeight.w800,
             letterSpacing: 1.1,
-            color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+            color: isDark
+                ? JeevanSutraColors.freshLeaf
+                : JeevanSutraColors.forestGreen,
           ),
         ),
         const SizedBox(height: 12),
@@ -336,10 +409,14 @@ class _DietScreenState extends State<DietScreen> {
             margin: const EdgeInsets.only(bottom: 14),
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+              color: isDark
+                  ? JeevanSutraColors.darkSurface
+                  : JeevanSutraColors.pureWhite,
               borderRadius: BorderRadius.circular(22),
               border: Border.all(
-                color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
+                color: isDark
+                    ? JeevanSutraColors.darkBorder
+                    : JeevanSutraColors.subtleBorder,
               ),
             ),
             child: Column(
@@ -349,9 +426,14 @@ class _DietScreenState extends State<DietScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
-                        color: JeevanSutraColors.mutedGold.withValues(alpha: 0.2),
+                        color: JeevanSutraColors.mutedGold.withValues(
+                          alpha: 0.2,
+                        ),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -367,7 +449,9 @@ class _DietScreenState extends State<DietScreen> {
                       meal.timing,
                       style: TextStyle(
                         fontSize: 11,
-                        color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                        color: isDark
+                            ? JeevanSutraColors.darkTextSecondary
+                            : JeevanSutraColors.secondaryText,
                       ),
                     ),
                   ],
@@ -378,7 +462,9 @@ class _DietScreenState extends State<DietScreen> {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+                    color: isDark
+                        ? JeevanSutraColors.darkTextPrimary
+                        : JeevanSutraColors.forestGreen,
                   ),
                 ),
                 Text(
@@ -386,7 +472,9 @@ class _DietScreenState extends State<DietScreen> {
                   style: TextStyle(
                     fontSize: 11,
                     fontStyle: FontStyle.italic,
-                    color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                    color: isDark
+                        ? JeevanSutraColors.darkTextSecondary
+                        : JeevanSutraColors.secondaryText,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -395,7 +483,9 @@ class _DietScreenState extends State<DietScreen> {
                   style: TextStyle(
                     fontSize: 11.5,
                     height: 1.4,
-                    color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.mainText,
+                    color: isDark
+                        ? JeevanSutraColors.darkTextPrimary
+                        : JeevanSutraColors.mainText,
                   ),
                 ),
                 const Divider(height: 18),
@@ -404,16 +494,23 @@ class _DietScreenState extends State<DietScreen> {
                   runSpacing: 6,
                   children: meal.ingredients.map((ing) {
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
-                        color: isDark ? JeevanSutraColors.darkCanvas : JeevanSutraColors.warmIvory,
+                        color: isDark
+                            ? JeevanSutraColors.darkCanvas
+                            : JeevanSutraColors.warmIvory,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         ing,
                         style: TextStyle(
                           fontSize: 10,
-                          color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                          color: isDark
+                              ? JeevanSutraColors.darkTextSecondary
+                              : JeevanSutraColors.secondaryText,
                         ),
                       ),
                     );
@@ -433,10 +530,14 @@ class _DietScreenState extends State<DietScreen> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isDark ? JeevanSutraColors.darkSurfaceElevated : JeevanSutraColors.softSage,
+        color: isDark
+            ? JeevanSutraColors.darkSurfaceElevated
+            : JeevanSutraColors.softSage,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
+          color: isDark
+              ? JeevanSutraColors.darkBorder
+              : JeevanSutraColors.subtleBorder,
         ),
       ),
       child: Column(
@@ -444,22 +545,40 @@ class _DietScreenState extends State<DietScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.menu_book_rounded, color: JeevanSutraColors.forestGreen, size: 18),
+              const Icon(
+                Icons.menu_book_rounded,
+                color: JeevanSutraColors.forestGreen,
+                size: 18,
+              ),
               const SizedBox(width: 8),
               Text(
                 "Charaka Ahara Vidhi (Rules of Eating)",
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+                  color: isDark
+                      ? JeevanSutraColors.darkTextPrimary
+                      : JeevanSutraColors.forestGreen,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          _buildRuleItem("Ushnam Ashneeyat", "Eat warm, freshly cooked food to stoke digestive fire (Agni).", isDark),
-          _buildRuleItem("Snigdham Ashneeyat", "Include healthy unctuous fats (pure A2 Ghee) for cellular absorption.", isDark),
-          _buildRuleItem("Tanmana Bhunjeeta", "Eat with undivided attention, without screens or hurried movement.", isDark),
+          _buildRuleItem(
+            "Ushnam Ashneeyat",
+            "Eat warm, freshly cooked food to stoke digestive fire (Agni).",
+            isDark,
+          ),
+          _buildRuleItem(
+            "Snigdham Ashneeyat",
+            "Include healthy unctuous fats (pure A2 Ghee) for cellular absorption.",
+            isDark,
+          ),
+          _buildRuleItem(
+            "Tanmana Bhunjeeta",
+            "Eat with undivided attention, without screens or hurried movement.",
+            isDark,
+          ),
         ],
       ),
     );
@@ -471,7 +590,13 @@ class _DietScreenState extends State<DietScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("• ", style: TextStyle(fontWeight: FontWeight.bold, color: JeevanSutraColors.forestGreen)),
+          const Text(
+            "• ",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: JeevanSutraColors.forestGreen,
+            ),
+          ),
           Expanded(
             child: RichText(
               text: TextSpan(
@@ -482,14 +607,18 @@ class _DietScreenState extends State<DietScreen> {
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                       fontStyle: FontStyle.italic,
-                      color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                      color: isDark
+                          ? JeevanSutraColors.freshLeaf
+                          : JeevanSutraColors.forestGreen,
                     ),
                   ),
                   TextSpan(
                     text: meaning,
                     style: TextStyle(
                       fontSize: 11,
-                      color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.mainText,
+                      color: isDark
+                          ? JeevanSutraColors.darkTextSecondary
+                          : JeevanSutraColors.mainText,
                     ),
                   ),
                 ],

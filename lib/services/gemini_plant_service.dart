@@ -1,57 +1,39 @@
 import 'dart:typed_data';
 
-import 'package:firebase_ai/firebase_ai.dart';
-
 import '../models/plant.dart';
-import '../repositories/content_repository.dart';
 import 'gemini_service.dart';
 
 class GeminiPlantService {
-  GeminiPlantService._();
+  GeminiPlantService({Future<PlantScanResult> Function(Uint8List)? analyzer})
+    : _analyzer = analyzer ?? GeminiService.instance.analyzePlantImage;
 
-  static final GeminiPlantService instance = GeminiPlantService._();
+  static final GeminiPlantService instance = GeminiPlantService();
+  final Future<PlantScanResult> Function(Uint8List) _analyzer;
 
   Future<Plant?> identifyPlant(Uint8List imageBytes) async {
-    final model = FirebaseAI.googleAI().generativeModel(
-      model: GeminiService.modelName,
+    final result = await _analyzer(imageBytes);
+    if (result.organismType != 'plant' || result.confidence < 0.6) return null;
+
+    return Plant(
+      id: 'ai_scan',
+      commonName: result.plantName,
+      sanskritName: result.sanskritName,
+      hindiName: result.hindiName,
+      scientificName: result.scientificName ?? result.plantName,
+      family: result.family ?? '',
+      category: result.plantCategory ?? 'AI identified (unverified)',
+      medicinalClassification: result.medicinalClassification,
+      growingInformation: result.growingInformation,
+      identification: result.identification,
+      traditionalUses: [result.traditionalUses],
+      scientificEvidence: [result.scientificEvidence],
+      safetySummary: result.safetySummary,
+      precautions: result.precautions,
+      isToxic: result.isToxic,
+      toxicityWarning: result.toxicityWarning,
+      organismType: result.organismType,
+      confidence: result.confidence,
+      reviewStatus: 'ai_scan_unverified',
     );
-
-    final response = await model
-        .generateContent([
-          Content.multi([
-            TextPart(
-              'Identify the medicinal plant in this image. '
-              'Return ONLY the most likely common plant name. '
-              'If you are not reasonably confident, return UNKNOWN.',
-            ),
-            InlineDataPart(GeminiService.imageMimeType(imageBytes), imageBytes),
-          ]),
-        ])
-        .timeout(const Duration(seconds: 60));
-
-    final name = response.text?.trim() ?? '';
-
-    if (name.isEmpty || name.toUpperCase().contains('UNKNOWN')) {
-      return null;
-    }
-
-    final plants = await ContentRepository.loadPlants();
-
-    final normalized = name.toLowerCase();
-
-    for (final plant in plants) {
-      final names = [
-        plant.commonName,
-        plant.sanskritName ?? '',
-        plant.hindiName ?? '',
-        plant.scientificName,
-      ];
-
-      if (names.any((n) => n.toLowerCase() == normalized)) {
-        return plant;
-      }
-    }
-
-    return null;
   }
 }

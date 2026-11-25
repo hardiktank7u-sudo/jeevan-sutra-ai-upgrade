@@ -1,5 +1,4 @@
-// Google AI Studio - Jeevan Sutra Plant Scanner Screen
-// High-tech botanical viewfinder, spectral diagnostics & Gemini plant taxonomy
+// Jeevan Sutra plant camera and catalogue-guided identification screen
 import 'dart:async';
 import 'dart:typed_data';
 
@@ -9,8 +8,11 @@ import 'package:image_picker/image_picker.dart';
 import '../data/sample_data.dart';
 import '../models/plant.dart';
 import '../models/wellness_models.dart';
+import '../repositories/content_repository.dart';
 import '../services/gemini_service.dart';
 import '../services/local_storage_service.dart';
+import '../services/plant_feature_matcher.dart';
+import '../services/visible_image_summary.dart';
 import '../theme/app_theme.dart';
 import '../widgets/botanical_background.dart';
 import 'plant_detail_screen.dart';
@@ -31,7 +33,6 @@ class _ScannerScreenState extends State<ScannerScreen>
 
   Uint8List? _selectedImage;
   bool _isScanning = false;
-  bool _flashActive = false;
   PlantScanResult? _scanResult;
   MedicinalPlant? _samplePlant;
   int _sampleIndex = 0;
@@ -41,6 +42,15 @@ class _ScannerScreenState extends State<ScannerScreen>
 
   List<Map<String, dynamic>> _history = [];
   late final AnimationController _laserController;
+  bool _guidedMode = false;
+  VisibleImageSummary? _imageSummary;
+  PlantCatalogueLoad? _catalogue;
+  List<PlantTraitProfile> _profiles = const [];
+  final Set<String> _selectedTraitIds = <String>{};
+  List<PlantFeatureMatch> _rankedMatches = const [];
+  bool _matchesRanked = false;
+  String? _guidedError;
+  String? _guidedFileName;
 
   @override
   void initState() {
@@ -91,45 +101,20 @@ class _ScannerScreenState extends State<ScannerScreen>
       final generation = ++_scanGeneration;
       _sampleScanTimer?.cancel();
 
-      setState(() {
-        _selectedImage = bytes;
-        _scanResult = null;
-        _isScanning = true;
-      });
-
-      try {
-        await LocalStorageService.instance.addScanHistory(fileName: file.name);
-        await _loadHistory();
-      } catch (_) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('The scan could not be saved on this device.'),
-            ),
-          );
-        }
-      }
-      if (!mounted || generation != _scanGeneration) return;
-
-      // Scan with Gemini AI
-      try {
-        final analyze =
-            widget.plantAnalyzer ?? GeminiService.instance.analyzePlantImage;
-        final result = await analyze(bytes);
-        if (!mounted || generation != _scanGeneration) return;
-        setState(() {
-          _scanResult = result;
-          _isScanning = false;
-        });
-      } catch (e) {
-        if (!mounted || generation != _scanGeneration) return;
-        setState(() {
-          _isScanning = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(GeminiService.describeFailure(e))),
+      if (source == ImageSource.gallery && widget.plantAnalyzer == null) {
+        await _beginGuidedComparison(
+          fileName: file.name,
+          bytes: bytes,
+          generation: generation,
         );
+        return;
       }
+
+      await _analyzeImageWithGemini(
+        fileName: file.name,
+        bytes: bytes,
+        generation: generation,
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() => _isScanning = false);
@@ -141,11 +126,199 @@ class _ScannerScreenState extends State<ScannerScreen>
     }
   }
 
+  Future<void> _analyzeImageWithGemini({
+    required String fileName,
+    required Uint8List bytes,
+    required int generation,
+  }) async {
+    setState(() {
+      _guidedMode = false;
+      _selectedImage = bytes;
+      _scanResult = null;
+      _isScanning = true;
+    });
+
+    try {
+      await LocalStorageService.instance.addScanHistory(fileName: fileName);
+      await _loadHistory();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('The scan could not be saved on this device.'),
+          ),
+        );
+      }
+    }
+    if (!mounted || generation != _scanGeneration) return;
+
+    // Scan with Gemini AI
+    try {
+      final analyze =
+          widget.plantAnalyzer ?? GeminiService.instance.analyzePlantImage;
+      final result = await analyze(bytes);
+      if (!mounted || generation != _scanGeneration) return;
+      setState(() {
+        _scanResult = result;
+        _isScanning = false;
+      });
+      try {
+        await LocalStorageService.instance.addScanHistory(
+          fileName: fileName,
+          plantName: result.plantName,
+          confidence: result.confidence,
+          scanResult: _scanResultToStorage(result),
+        );
+        await _loadHistory();
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'The scan result could not be saved on this device.',
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted || generation != _scanGeneration) return;
+      final failureMessage =
+          'Automatic image recognition was unavailable. ${GeminiService.describeFailure(e)} Guided matching is ready.';
+      await _beginGuidedComparison(
+        fileName: fileName,
+        bytes: bytes,
+        generation: generation,
+        saveHistory: false,
+        initialError: failureMessage,
+      );
+    }
+  }
+
+  Future<void> _beginGuidedComparison({
+    required String fileName,
+    required Uint8List bytes,
+    required int generation,
+    bool saveHistory = true,
+    String? initialError,
+  }) async {
+    setState(() {
+      _guidedMode = true;
+      _guidedFileName = fileName;
+      _selectedImage = bytes;
+      _scanResult = null;
+      _isScanning = true;
+      _imageSummary = null;
+      _catalogue = null;
+      _profiles = const [];
+      _rankedMatches = const [];
+      _matchesRanked = false;
+      _guidedError = initialError;
+      _selectedTraitIds.clear();
+    });
+
+    if (saveHistory) {
+      try {
+        await LocalStorageService.instance.addScanHistory(fileName: fileName);
+        await _loadHistory();
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('The photo could not be saved on this device.'),
+            ),
+          );
+        }
+      }
+    }
+    if (!mounted || generation != _scanGeneration) return;
+
+    final summary = await VisibleImageSummary.fromBytes(bytes);
+    if (!mounted || generation != _scanGeneration) return;
+
+    try {
+      final catalogue = await ContentRepository.loadComparisonCatalogue();
+      if (!mounted || generation != _scanGeneration) return;
+      setState(() {
+        _imageSummary = summary;
+        _catalogue = catalogue;
+        _profiles = PlantFeatureMatcher.index(catalogue.plants);
+        _isScanning = false;
+        if (initialError != null) {
+          _guidedError = initialError;
+        }
+      });
+    } catch (_) {
+      if (!mounted || generation != _scanGeneration) return;
+      setState(() {
+        _imageSummary = summary;
+        _isScanning = false;
+        _guidedError = 'The plant catalogue could not be read on this device.';
+      });
+    }
+  }
+
+  Future<void> _rankGuidedMatches() async {
+    if (_selectedTraitIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Select at least one trait you can see or smell. Traits are not detected automatically.',
+          ),
+        ),
+      );
+      return;
+    }
+    final ranked = PlantFeatureMatcher.rank(
+      profiles: _profiles,
+      selectedTraitIds: _selectedTraitIds,
+    );
+    setState(() {
+      _rankedMatches = ranked;
+      _matchesRanked = true;
+    });
+    final top = ranked.isEmpty ? null : ranked.first;
+    final fileName = _guidedFileName;
+    if (top == null || fileName == null) return;
+    try {
+      await LocalStorageService.instance.addScanHistory(
+        fileName: fileName,
+        plantName: 'Guided trait match: ${top.plant.commonName}',
+        confidence: top.similarity,
+        scanResult: {
+          'plantName': 'Guided trait match: ${top.plant.commonName}',
+          'scientificName': top.plant.scientificName,
+          'family': top.plant.family,
+          'organismType': 'guided-match',
+          'confidence': top.similarity,
+          'liveAiAvailable': false,
+          'identification':
+              'Trait overlap only. ${top.matchedTraits.length} of ${top.selectedCount} selected traits are written in this record. This is not automatic visual recognition.',
+          'traditionalUses': top.plant.traditionalUses.join('\n'),
+          'scientificEvidence': top.plant.scientificEvidence.join('\n'),
+          'safetySummary': top.plant.safetySummary,
+          'isToxic': top.plant.isToxic,
+          'toxicityWarning': top.plant.toxicityWarning,
+        },
+      );
+      await _loadHistory();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('The match could not be saved on this device.'),
+          ),
+        );
+      }
+    }
+  }
+
   void _simulateSampleScan() {
     final generation = ++_scanGeneration;
     final current = SampleData.medicinalPlants[_sampleIndex];
     _sampleScanTimer?.cancel();
     setState(() {
+      _guidedMode = false;
       _selectedImage = null;
       _isScanning = true;
       _scanResult = null;
@@ -159,6 +332,7 @@ class _ScannerScreenState extends State<ScannerScreen>
           plantName: current.commonName,
           scientificName: current.botanicalName,
           confidence: 0.984,
+          isSampleDemonstration: true,
           identification: current.primaryUses,
           traditionalUses: current.traditionalApplication,
           scientificEvidence: current.scientificEvidence,
@@ -197,8 +371,15 @@ class _ScannerScreenState extends State<ScannerScreen>
                 const SizedBox(height: 16),
                 _buildActionButtons(isDark),
                 const SizedBox(height: 20),
-                if (_isScanning) _buildScanningIndicator(isDark),
-                if (_scanResult != null)
+                if (_isScanning)
+                  _buildScanningIndicator(
+                    isDark,
+                    message: _guidedMode
+                        ? 'Reading photo colors and loading the plant catalogue...'
+                        : 'Analyzing botanical taxonomy and Ayurvedic properties...',
+                  ),
+                if (_guidedMode) _buildGuidedMatcher(isDark),
+                if (_scanResult != null && !_guidedMode)
                   _buildScanResultCard(_scanResult!, isDark),
                 const SizedBox(height: 20),
                 _buildScanHistory(isDark),
@@ -253,7 +434,7 @@ class _ScannerScreenState extends State<ScannerScreen>
         ),
         const SizedBox(height: 2),
         Text(
-          "Optical identification and taxonomy for medicinal flora & herbs.",
+          "Choose a photo, then match visible traits against the plant catalogue. No visual recognition model is bundled.",
           style: TextStyle(
             fontSize: 12,
             color: isDark
@@ -297,21 +478,18 @@ class _ScannerScreenState extends State<ScannerScreen>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                InkWell(
-                  onTap: () => setState(() => _flashActive = !_flashActive),
-                  borderRadius: BorderRadius.circular(20),
+                Tooltip(
+                  message: 'Use the camera app to control flash',
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: _flashActive
-                          ? Colors.amber
-                          : Colors.white.withValues(alpha: 0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.flash_on_rounded,
                       size: 16,
-                      color: _flashActive ? Colors.black : Colors.white,
+                      color: Colors.white,
                     ),
                   ),
                 ),
@@ -324,9 +502,11 @@ class _ScannerScreenState extends State<ScannerScreen>
                     color: Colors.black.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Text(
-                    "SCAN_MODE: 4K_SPECTRAL",
-                    style: TextStyle(
+                  child: Text(
+                    widget.plantAnalyzer == null
+                        ? "GEMINI VISION • LIVE BOTANICAL AI"
+                        : "MODEL TEST PATH • UNVERIFIED",
+                    style: const TextStyle(
                       fontFamily: 'monospace',
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
@@ -453,6 +633,16 @@ class _ScannerScreenState extends State<ScannerScreen>
                               width: 140,
                               height: 140,
                               fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Center(
+                                    child: Text(
+                                      'Preview unavailable',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
                             ),
                           )
                         : Column(
@@ -627,7 +817,7 @@ class _ScannerScreenState extends State<ScannerScreen>
     );
   }
 
-  Widget _buildScanningIndicator(bool isDark) {
+  Widget _buildScanningIndicator(bool isDark, {required String message}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -639,10 +829,10 @@ class _ScannerScreenState extends State<ScannerScreen>
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: JeevanSutraColors.freshLeaf),
       ),
-      child: const Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(
+          const SizedBox(
             width: 16,
             height: 16,
             child: CircularProgressIndicator(
@@ -650,11 +840,11 @@ class _ScannerScreenState extends State<ScannerScreen>
               color: JeevanSutraColors.forestGreen,
             ),
           ),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
-              "Analyzing botanical taxonomy and Ayurvedic properties...",
-              style: TextStyle(
+              message,
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
                 color: JeevanSutraColors.forestGreen,
@@ -666,9 +856,309 @@ class _ScannerScreenState extends State<ScannerScreen>
     );
   }
 
+  Widget _buildGuidedMatcher(bool isDark) {
+    final groupedTraits = <String, List<ObservableTrait>>{};
+    for (final trait in PlantFeatureMatcher.traits) {
+      groupedTraits.putIfAbsent(trait.group, () => []).add(trait);
+    }
+
+    final surface = isDark
+        ? JeevanSutraColors.darkSurface
+        : JeevanSutraColors.pureWhite;
+    final textColor = isDark
+        ? JeevanSutraColors.darkTextPrimary
+        : JeevanSutraColors.mainText;
+    final secondaryColor = isDark
+        ? JeevanSutraColors.darkTextSecondary
+        : JeevanSutraColors.secondaryText;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: isDark
+              ? JeevanSutraColors.darkBorder
+              : JeevanSutraColors.subtleBorder,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'GUIDED IDENTIFICATION',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.9,
+              color: isDark
+                  ? JeevanSutraColors.freshLeaf
+                  : JeevanSutraColors.forestGreen,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'The photo is not classified by a vision model. The image summary below reports color measurements only. Select the traits you can observe; they will be compared with wording in each plant record.',
+            style: TextStyle(fontSize: 12, height: 1.45, color: textColor),
+          ),
+          if (_imageSummary != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              _imageSummary!.explanation,
+              style: TextStyle(
+                fontSize: 11,
+                height: 1.4,
+                color: secondaryColor,
+              ),
+            ),
+          ],
+          if (_catalogue != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              _catalogue!.comparisonNote,
+              style: TextStyle(
+                fontSize: 11,
+                height: 1.4,
+                color: secondaryColor,
+              ),
+            ),
+          ],
+          if (_guidedError != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              _guidedError!,
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+          Text(
+            'Select observable traits (${_selectedTraitIds.length} selected)',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          for (final group in groupedTraits.entries) ...[
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                group.key,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: secondaryColor,
+                ),
+              ),
+            ),
+            Wrap(
+              spacing: 6,
+              runSpacing: 0,
+              children: [
+                for (final trait in group.value)
+                  FilterChip(
+                    label: Text(trait.label),
+                    selected: _selectedTraitIds.contains(trait.id),
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) {
+                          _selectedTraitIds.add(trait.id);
+                        } else {
+                          _selectedTraitIds.remove(trait.id);
+                        }
+                        _rankedMatches = const [];
+                        _matchesRanked = false;
+                      });
+                    },
+                  ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _isScanning || _profiles.isEmpty
+                  ? null
+                  : _rankGuidedMatches,
+              icon: const Icon(Icons.manage_search_rounded),
+              label: Text('Compare against ${_profiles.length} records'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: JeevanSutraColors.forestGreen,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+          if (_matchesRanked) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Similarity is a text-overlap score: matched selected traits divided by selected traits. It is not image similarity, a probability, or a confirmed identification.',
+              style: TextStyle(
+                fontSize: 11,
+                height: 1.4,
+                color: secondaryColor,
+              ),
+            ),
+            const SizedBox(height: 10),
+            if (_rankedMatches.isEmpty)
+              Text(
+                'No record mentions the selected traits in its identification description.',
+                style: TextStyle(fontSize: 12, color: textColor),
+              )
+            else ...[
+              Text(
+                'Best matching catalogue records',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: textColor,
+                ),
+              ),
+              const SizedBox(height: 6),
+              for (final match in _rankedMatches.take(10))
+                Card(
+                  color: isDark
+                      ? JeevanSutraColors.darkSurfaceElevated
+                      : JeevanSutraColors.warmIvory,
+                  margin: const EdgeInsets.only(bottom: 6),
+                  child: ListTile(
+                    title: Text(
+                      match.plant.commonName,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: textColor,
+                      ),
+                    ),
+                    subtitle: Text(
+                      '${match.plant.scientificName}\n'
+                      '${match.matchedTraits.length} of ${match.selectedCount} selected traits appear in this record',
+                      style: TextStyle(fontSize: 11, color: secondaryColor),
+                    ),
+                    trailing: Text(
+                      '${(match.similarity * 100).toStringAsFixed(0)}%\ntext overlap',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: isDark
+                            ? JeevanSutraColors.freshLeaf
+                            : JeevanSutraColors.forestGreen,
+                      ),
+                    ),
+                    isThreeLine: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PlantDetailScreen(plant: match.plant),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
   // ─── Scan Result Monograph Card ────────────────────────────────────────────
 
+  Map<String, dynamic> _scanResultToStorage(PlantScanResult result) => {
+    'plantName': result.plantName,
+    'sanskritName': result.sanskritName,
+    'hindiName': result.hindiName,
+    'scientificName': result.scientificName,
+    'family': result.family,
+    'plantCategory': result.plantCategory,
+    'medicinalClassification': result.medicinalClassification,
+    'growingInformation': result.growingInformation,
+    'organismType': result.organismType,
+    'confidence': result.confidence,
+    'liveAiAvailable': result.liveAiAvailable,
+    'identification': result.identification,
+    'traditionalUses': result.traditionalUses,
+    'scientificEvidence': result.scientificEvidence,
+    'safetySummary': result.safetySummary,
+    'precautions': result.precautions,
+    'isToxic': result.isToxic,
+    'toxicityWarning': result.toxicityWarning,
+    'reviewStatus': 'ai_scan_unverified',
+  };
+
+  Plant _plantFromScanResult(PlantScanResult result) {
+    final matchedPlant = result.matchedLocalPlant;
+    if (matchedPlant == null) {
+      return Plant(
+        id: 'scan_result',
+        commonName: result.plantName,
+        sanskritName: result.sanskritName,
+        hindiName: result.hindiName,
+        scientificName: result.scientificName ?? result.plantName,
+        family: result.family ?? '',
+        category: result.plantCategory ?? 'AI identified (unverified)',
+        medicinalClassification: result.medicinalClassification,
+        growingInformation: result.growingInformation,
+        identification: result.identification,
+        traditionalUses: [result.traditionalUses],
+        scientificEvidence: [result.scientificEvidence],
+        safetySummary: result.safetySummary,
+        precautions: result.precautions,
+        isToxic: result.isToxic,
+        toxicityWarning: result.toxicityWarning,
+        organismType: result.organismType,
+        confidence: result.confidence,
+        reviewStatus: 'ai_scan_unverified',
+      );
+    }
+    final mergedIsToxic = result.isToxic == true || matchedPlant.isToxic == true
+        ? true
+        : result.isToxic == false || matchedPlant.isToxic == false
+        ? false
+        : null;
+    return Plant.fromJson({
+      ...matchedPlant.toJson(),
+      'isToxic': mergedIsToxic,
+      'toxicityWarning': result.toxicityWarning ?? matchedPlant.toxicityWarning,
+      'organismType': result.organismType,
+      'confidence': result.confidence,
+      'category': result.plantCategory ?? matchedPlant.category,
+      'medicinalClassification': result.medicinalClassification,
+      'growingInformation': result.growingInformation,
+      'identification': result.identification,
+      'traditionalUses': [result.traditionalUses],
+      'scientificEvidence': [result.scientificEvidence],
+      'safetySummary': result.safetySummary,
+      'precautions': result.precautions,
+      'reviewStatus': 'ai_scan_unverified',
+    });
+  }
+
   Widget _buildScanResultCard(PlantScanResult result, bool isDark) {
+    final isSampleDemonstration = result.isSampleDemonstration;
+    final isUncertain =
+        result.organismType == 'uncertain' || result.confidence < 0.6;
+    final isConfirmedPlant = result.organismType == 'plant' && !isUncertain;
+    final canOpenMonograph = isConfirmedPlant && !isSampleDemonstration;
+    final statusLabel = isSampleDemonstration
+        ? 'SAMPLE DEMONSTRATION • NOT A SCAN'
+        : isUncertain
+        ? 'UNCERTAIN — NOT CONFIRMED'
+        : switch (result.organismType) {
+            'fungus' => 'FUNGUS — NOT A PLANT',
+            'non-plant' => 'NO PLANT DETECTED',
+            _ =>
+              'MODEL-REPORTED CONFIDENCE: ${(result.confidence * 100).toStringAsFixed(1)}%',
+          };
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -705,7 +1195,7 @@ class _ScannerScreenState extends State<ScannerScreen>
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  "CONFIDENCE: ${(result.confidence * 100).toStringAsFixed(1)}%",
+                  statusLabel,
                   style: const TextStyle(
                     fontSize: 9.5,
                     fontWeight: FontWeight.bold,
@@ -713,32 +1203,37 @@ class _ScannerScreenState extends State<ScannerScreen>
                   ),
                 ),
               ),
-              IconButton(
-                icon: const Icon(
-                  Icons.bookmark_add_rounded,
-                  color: JeevanSutraColors.mutedGold,
-                ),
-                tooltip: "Save to Sanctuary Herbarium",
-                onPressed: () async {
-                  await LocalStorageService.instance.savePlant(
-                    result.plantName,
-                  );
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          "${result.plantName} saved to Sanctuary Herbarium!",
-                        ),
-                      ),
+              if (canOpenMonograph)
+                IconButton(
+                  icon: const Icon(
+                    Icons.bookmark_add_rounded,
+                    color: JeevanSutraColors.mutedGold,
+                  ),
+                  tooltip: "Save to Sanctuary Herbarium",
+                  onPressed: () async {
+                    await LocalStorageService.instance.savePlantRecord(
+                      _plantFromScanResult(result),
                     );
-                  }
-                },
-              ),
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            "${result.plantName} saved to Sanctuary Herbarium!",
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            result.plantName,
+            isSampleDemonstration
+                ? 'Sample: ${result.plantName}'
+                : isUncertain
+                ? 'Uncertain identification'
+                : result.plantName,
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -748,7 +1243,15 @@ class _ScannerScreenState extends State<ScannerScreen>
             ),
           ),
           Text(
-            result.scientificName ?? result.plantName,
+            isUncertain
+                ? result.plantName == 'Unidentified Botanical'
+                      ? 'No reliable match'
+                      : 'Possible match: ${result.plantName}'
+                : isConfirmedPlant
+                ? result.scientificName ?? result.plantName
+                : result.organismType == 'fungus'
+                ? 'Fungus — not a plant'
+                : 'No plant identified',
             style: TextStyle(
               fontSize: 13,
               fontStyle: FontStyle.italic,
@@ -757,61 +1260,173 @@ class _ScannerScreenState extends State<ScannerScreen>
                   : JeevanSutraColors.secondaryText,
             ),
           ),
+          if (isConfirmedPlant &&
+              result.family != null &&
+              result.family!.isNotEmpty)
+            Text(
+              'Family: ${result.family}',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark
+                    ? JeevanSutraColors.darkTextSecondary
+                    : JeevanSutraColors.secondaryText,
+              ),
+            ),
+          if (isConfirmedPlant &&
+              result.plantCategory != null &&
+              result.plantCategory!.isNotEmpty)
+            Text(
+              'Category: ${result.plantCategory}',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark
+                    ? JeevanSutraColors.darkTextSecondary
+                    : JeevanSutraColors.secondaryText,
+              ),
+            ),
+          Text(
+            'Classification: ${isUncertain ? 'uncertain' : result.organismType}',
+            style: TextStyle(
+              fontSize: 11,
+              color: isDark
+                  ? JeevanSutraColors.darkTextSecondary
+                  : JeevanSutraColors.secondaryText,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            isSampleDemonstration
+                ? 'Demonstration content only. This result was not derived from an image.'
+                : 'AI-generated identification is unverified. Confidence is a model estimate, not a guarantee of accuracy.',
+            style: TextStyle(
+              fontSize: 11,
+              color: isDark
+                  ? JeevanSutraColors.darkTextSecondary
+                  : JeevanSutraColors.secondaryText,
+            ),
+          ),
+          if (!result.liveAiAvailable) ...[
+            const SizedBox(height: 8),
+            _buildResultRow(
+              'Live AI unavailable',
+              'This image was not identified by Gemini. Check your connection and try again.',
+              isDark,
+            ),
+            if (_selectedImage != null) ...[
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () {
+                  _beginGuidedComparison(
+                    fileName: _guidedFileName ?? 'specimen.jpg',
+                    bytes: _selectedImage!,
+                    generation: ++_scanGeneration,
+                    saveHistory: false,
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: isDark
+                      ? JeevanSutraColors.darkTextPrimary
+                      : JeevanSutraColors.forestGreen,
+                  side: BorderSide(
+                    color: isDark
+                        ? JeevanSutraColors.darkBorder
+                        : JeevanSutraColors.subtleBorder,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                icon: const Icon(Icons.menu_book_rounded, size: 16),
+                label: const Text('Compare with 92 Bundled Records'),
+              ),
+            ],
+          ],
           const Divider(height: 24),
           _buildResultRow(
-            "Ayurvedic Properties",
+            "Visual Identification",
             result.identification,
             isDark,
           ),
+          if (isConfirmedPlant && result.medicinalClassification != null) ...[
+            const SizedBox(height: 10),
+            _buildResultRow(
+              'Medicinal classification (AI-reported)',
+              result.medicinalClassification!,
+              isDark,
+            ),
+          ],
           const SizedBox(height: 10),
           _buildResultRow(
-            "Primary Indications",
+            "Traditional Uses (AI-reported; unverified)",
             result.traditionalUses,
             isDark,
           ),
           const SizedBox(height: 10),
-          _buildResultRow("Safety & Caution", result.safetySummary, isDark),
-          const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => PlantDetailScreen(
-                      plant:
-                          result.matchedLocalPlant ??
-                          Plant(
-                            id: 'scan_result',
-                            commonName: result.plantName,
-                            scientificName:
-                                result.scientificName ?? result.plantName,
-                            identification: result.identification,
-                            traditionalUses: [result.traditionalUses],
-                            scientificEvidence: [result.scientificEvidence],
-                            safetySummary: result.safetySummary,
-                            precautions: result.precautions,
-                          ),
-                    ),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: JeevanSutraColors.forestGreen,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              icon: const Text(
-                "View Full Monograph",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-              label: const Icon(Icons.arrow_forward_rounded, size: 16),
-            ),
+          _buildResultRow(
+            "Scientific Evidence (AI-reported; unverified)",
+            result.scientificEvidence,
+            isDark,
           ),
+          const SizedBox(height: 10),
+          _buildResultRow("Safety & Caution", result.safetySummary, isDark),
+          if (result.toxicityWarning != null) ...[
+            const SizedBox(height: 10),
+            _buildResultRow(
+              result.isToxic == true ? "Toxicity Warning" : "Toxicity Status",
+              result.toxicityWarning!,
+              isDark,
+            ),
+          ],
+          if (result.precautions.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _buildResultRow(
+              "Precautions (AI-reported; unverified)",
+              result.precautions.join('\n'),
+              isDark,
+            ),
+          ],
+          if (isConfirmedPlant &&
+              result.growingInformation != null &&
+              result.growingInformation!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _buildResultRow(
+              'Growing information (AI-reported)',
+              result.growingInformation!,
+              isDark,
+            ),
+          ],
+          if (canOpenMonograph) ...[
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) {
+                        final plant = _plantFromScanResult(result);
+                        return PlantDetailScreen(plant: plant);
+                      },
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: JeevanSutraColors.forestGreen,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                icon: const Text(
+                  "View Full Monograph",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                label: const Icon(Icons.arrow_forward_rounded, size: 16),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -849,6 +1464,101 @@ class _ScannerScreenState extends State<ScannerScreen>
 
   // ─── Scan History List ─────────────────────────────────────────────────────
 
+  void _openHistoryEntry(Map<String, dynamic> item) {
+    final organismType = item['organismType']?.toString();
+    final confidence = (item['confidence'] as num?)?.toDouble();
+    final isConfirmedPlant =
+        organismType == 'plant' && confidence != null && confidence >= 0.6;
+
+    if (isConfirmedPlant) {
+      final isToxic = item['isToxic'] is bool ? item['isToxic'] as bool : null;
+      final plant = Plant(
+        id: 'saved_scan_${item['timestamp'] ?? item['time'] ?? item['fileName']}',
+        commonName:
+            item['plantName']?.toString() ??
+            item['name']?.toString() ??
+            'Botanical specimen',
+        sanskritName: item['sanskritName']?.toString(),
+        hindiName: item['hindiName']?.toString(),
+        scientificName:
+            item['scientificName']?.toString() ??
+            item['plantName']?.toString() ??
+            'Unverified identification',
+        family: item['family']?.toString() ?? '',
+        category: item['plantCategory']?.toString() ?? 'General',
+        medicinalClassification: item['medicinalClassification']?.toString(),
+        growingInformation: item['growingInformation']?.toString(),
+        identification: item['identification']?.toString() ?? '',
+        traditionalUses: item['traditionalUses']?.toString().isNotEmpty == true
+            ? [item['traditionalUses'].toString()]
+            : const [],
+        scientificEvidence:
+            item['scientificEvidence']?.toString().isNotEmpty == true
+            ? [item['scientificEvidence'].toString()]
+            : const [],
+        safetySummary:
+            item['safetySummary']?.toString() ??
+            'Do not consume or use an unidentified plant medicinally.',
+        precautions: item['precautions'] is List
+            ? (item['precautions'] as List).whereType<String>().toList()
+            : const [],
+        isToxic: isToxic,
+        toxicityWarning: item['toxicityWarning']?.toString(),
+        organismType: 'plant',
+        confidence: confidence,
+        reviewStatus: 'ai_scan_unverified',
+      );
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => PlantDetailScreen(plant: plant)),
+      );
+      return;
+    }
+
+    final liveAiUnavailable = item['liveAiAvailable'] == false;
+    final classification = liveAiUnavailable
+        ? 'Live AI identification was unavailable'
+        : switch (organismType) {
+            'fungus' => 'Fungus — not a plant',
+            'non-plant' => 'No plant detected',
+            _ => 'Uncertain identification — not confirmed',
+          };
+    final warning = item['toxicityWarning']?.toString();
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          item['plantName']?.toString() ??
+              item['name']?.toString() ??
+              'Scan result',
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(classification),
+            const SizedBox(height: 12),
+            Text(
+              liveAiUnavailable
+                  ? 'This scan was not identified by Gemini. Do not consume or use this organism medicinally.'
+                  : 'Do not consume or use this organism medicinally. Identification and safety are unverified.',
+            ),
+            if (warning != null && warning.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(warning),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildScanHistory(bool isDark) {
     if (_history.isEmpty) return const SizedBox.shrink();
 
@@ -874,49 +1584,61 @@ class _ScannerScreenState extends State<ScannerScreen>
           separatorBuilder: (_, _) => const SizedBox(height: 8),
           itemBuilder: (context, index) {
             final item = _history[index];
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? JeevanSutraColors.darkSurface
-                    : JeevanSutraColors.pureWhite,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isDark
-                      ? JeevanSutraColors.darkBorder
-                      : JeevanSutraColors.subtleBorder,
+            return InkWell(
+              onTap: () => _openHistoryEntry(item),
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
                 ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.eco_rounded,
-                    size: 18,
-                    color: JeevanSutraColors.freshLeaf,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? JeevanSutraColors.darkSurface
+                      : JeevanSutraColors.pureWhite,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark
+                        ? JeevanSutraColors.darkBorder
+                        : JeevanSutraColors.subtleBorder,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      item['fileName']?.toString() ?? 'Botanical Specimen',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? JeevanSutraColors.darkTextPrimary
-                            : JeevanSutraColors.mainText,
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.eco_rounded,
+                      size: 18,
+                      color: JeevanSutraColors.freshLeaf,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        item['plantName']?.toString() ??
+                            item['fileName']?.toString() ??
+                            item['name']?.toString() ??
+                            'Botanical Specimen',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isDark
+                              ? JeevanSutraColors.darkTextPrimary
+                              : JeevanSutraColors.mainText,
+                        ),
                       ),
                     ),
-                  ),
-                  Text(
-                    item['timestamp']?.toString().split('T').first ?? '',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: isDark
-                          ? JeevanSutraColors.darkTextSecondary
-                          : JeevanSutraColors.secondaryText,
+                    Text(
+                      item['timestamp']?.toString().split('T').first ??
+                          item['time']?.toString().split('T').first ??
+                          '',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: isDark
+                            ? JeevanSutraColors.darkTextSecondary
+                            : JeevanSutraColors.secondaryText,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           },

@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/foundation.dart';
-
-import 'package:firebase_ai/firebase_ai.dart';
+import 'package:http/http.dart' as http;
 
 import '../models/plant.dart';
 import '../repositories/content_repository.dart';
@@ -13,109 +13,195 @@ class PlantScanResult {
   final String? sanskritName;
   final String? hindiName;
   final String? scientificName;
+  final String? family;
+  final String? plantCategory;
+  final String? medicinalClassification;
+  final String? growingInformation;
+  final String organismType;
   final double confidence;
+  final bool liveAiAvailable;
   final String identification;
   final String traditionalUses;
   final String scientificEvidence;
   final String safetySummary;
   final List<String> precautions;
-  final bool isToxic;
+  final bool? isToxic;
   final String? toxicityWarning;
   final Plant? matchedLocalPlant;
+  final bool isSampleDemonstration;
 
   const PlantScanResult({
     required this.plantName,
     this.sanskritName,
     this.hindiName,
     this.scientificName,
+    this.family,
+    this.plantCategory,
+    this.medicinalClassification,
+    this.growingInformation,
+    this.organismType = 'plant',
     required this.confidence,
+    this.liveAiAvailable = true,
     required this.identification,
     required this.traditionalUses,
     required this.scientificEvidence,
     required this.safetySummary,
     this.precautions = const [],
-    this.isToxic = false,
+    this.isToxic,
     this.toxicityWarning,
     this.matchedLocalPlant,
+    this.isSampleDemonstration = false,
   });
 }
 
+class GeminiBackendException implements Exception {
+  const GeminiBackendException(this.code);
+
+  final String code;
+
+  @override
+  String toString() => code;
+}
+
 class GeminiService {
-  GeminiService._();
+  GeminiService._({
+    http.Client? httpClient,
+    String? backendBaseUrl,
+    this._appCheckTokenProvider,
+    this._plantLoader,
+  }) : _httpClient = httpClient ?? http.Client(),
+       _backendBaseUrl = backendBaseUrl ?? _defaultBackendBaseUrl;
 
   static final GeminiService instance = GeminiService._();
 
-  static const String modelName = String.fromEnvironment(
-    'FIREBASE_AI_MODEL',
-    defaultValue: 'gemini-3.8-flash',
+  static const String modelName = 'gemini-3.8-flash';
+  static const String _defaultBackendBaseUrl = String.fromEnvironment(
+    'GEMINI_BACKEND_BASE_URL',
+    defaultValue: 'https://jeevan-sutra-gemini-api.jeevan-sutra-ai.workers.dev',
   );
 
   static const _requestTimeout = Duration(seconds: 60);
+  final http.Client _httpClient;
+  final String _backendBaseUrl;
+  final Future<String?> Function()? _appCheckTokenProvider;
+  final Future<List<Plant>> Function()? _plantLoader;
 
-  static const String _systemInstruction = '''
-You are Jeevan Sutra AI, an educational guide to Indian Knowledge Systems, Ayurveda, wellness and medicinal plants.
-
-Your mission is to explain traditional Indian knowledge alongside modern scientific understanding in a clear and responsible way.
-
-You specialize in:
-- Ayurvedic fundamentals such as Tridosha, Vata, Pitta, Kapha, Dinacharya and Ritucharya.
-- Indian medicinal plants and herbs.
-- Yoga, Pranayama, meditation and mindful living.
-- Wholesome nutrition and traditional Ahara principles.
-- Indian Knowledge Systems and traditional scientific knowledge.
-
-IMPORTANT SAFETY RULES:
-1. You are an educational wellness assistant, NOT a doctor.
-2. Never diagnose diseases.
-3. Never prescribe medicines or treatment doses.
-4. Never tell users to stop or replace prescribed medical treatment.
-5. For serious, persistent or concerning symptoms, recommend speaking with a qualified healthcare professional.
-6. Clearly distinguish traditional knowledge from modern scientific evidence.
-7. Do not present traditional claims as scientifically proven unless supported by evidence.
-8. Mention relevant safety concerns when discussing medicinal plants.
-9. Do not encourage unsafe self-treatment.
-10. Protect user privacy.
-
-STYLE:
-- Be warm, calm and encouraging.
-- Use clear Markdown.
-- Use short sections and bullet points.
-- Explain difficult concepts simply.
-- You may begin with "Namaste 🙏".
-''';
+  @visibleForTesting
+  GeminiService.forTesting({
+    required http.Client httpClient,
+    required String backendBaseUrl,
+    required Future<String?> Function() appCheckTokenProvider,
+    Future<List<Plant>> Function()? plantLoader,
+  }) : this._(
+         httpClient: httpClient,
+         backendBaseUrl: backendBaseUrl,
+         appCheckTokenProvider: appCheckTokenProvider,
+         plantLoader: plantLoader,
+       );
 
   Future<String?> getApiKey() async {
     return null;
   }
 
   Future<bool> hasApiKey() async {
-    return true;
+    return _backendBaseUrl.isNotEmpty;
   }
 
   @visibleForTesting
-  static List<Content> buildChatHistory(
+  static List<Map<String, String>> buildChatHistory(
     List<Map<String, dynamic>> conversationHistory,
   ) {
-    final messages = <Content>[];
+    final messages = <Map<String, String>>[];
     for (final message in conversationHistory) {
       final text = (message['text'] ?? '').toString().trim();
       if (text.isEmpty) continue;
       final role =
           message['role'] ?? (message['isUser'] == true ? 'user' : 'model');
       if (role == 'user') {
-        messages.add(Content.text(text));
+        messages.add({'role': 'user', 'text': text});
       } else if (role == 'model') {
-        messages.add(Content.model([TextPart(text)]));
+        messages.add({'role': 'model', 'text': text});
       }
     }
     final recent = messages.length > 10
         ? messages.sublist(messages.length - 10)
         : messages;
     // Truncating a long conversation can leave an orphaned model turn.
-    while (recent.isNotEmpty && recent.first.role != 'user') {
+    while (recent.isNotEmpty && recent.first['role'] != 'user') {
       recent.removeAt(0);
     }
     return recent;
+  }
+
+  Future<Map<String, String>> _requestHeaders() async {
+    try {
+      final token =
+          await (_appCheckTokenProvider?.call() ??
+              FirebaseAppCheck.instance.getToken());
+      debugPrint('[AI_HEADERS] Token retrieved: ${token != null && token.isNotEmpty}');
+      if (token == null || token.isEmpty) {
+        throw const GeminiBackendException('APP_CHECK_UNAVAILABLE');
+      }
+      return {'Content-Type': 'application/json', 'X-Firebase-AppCheck': token};
+    } on GeminiBackendException {
+      rethrow;
+    } catch (e) {
+      debugPrint('[AI_HEADERS] Token exception: $e');
+      throw const GeminiBackendException('APP_CHECK_UNAVAILABLE');
+    }
+  }
+
+  Uri _endpoint(String name) {
+    final base = Uri.tryParse(_backendBaseUrl);
+    if (base == null ||
+        base.scheme != 'https' ||
+        base.host.isEmpty ||
+        base.userInfo.isNotEmpty) {
+      throw const GeminiBackendException('BACKEND_NOT_CONFIGURED');
+    }
+    return base.resolve('/$name');
+  }
+
+  Future<GeminiBackendException> _responseError(
+    http.StreamedResponse response,
+  ) async {
+    if (response.statusCode == 403 || response.statusCode == 401) {
+      return const GeminiBackendException('APP_CHECK_REJECTED');
+    }
+    if (response.statusCode == 429) {
+      return const GeminiBackendException('RATE_LIMITED');
+    }
+    try {
+      final body = await response.stream
+          .transform(utf8.decoder)
+          .join()
+          .timeout(_requestTimeout);
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic> && decoded['error'] is String) {
+        return GeminiBackendException(decoded['error'] as String);
+      }
+    } catch (_) {}
+    return GeminiBackendException(
+      response.statusCode >= 500 ? 'BACKEND_UNAVAILABLE' : 'INVALID_RESPONSE',
+    );
+  }
+
+  GeminiBackendException _jsonResponseError(http.Response response) {
+    if (response.statusCode == 403 || response.statusCode == 401) {
+      return const GeminiBackendException('APP_CHECK_REJECTED');
+    }
+    if (response.statusCode == 429) {
+      return const GeminiBackendException('RATE_LIMITED');
+    }
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic> && decoded['error'] is String) {
+        return GeminiBackendException(decoded['error'] as String);
+      }
+    } catch (_) {}
+    return GeminiBackendException(
+      response.statusCode >= 500 ? 'BACKEND_UNAVAILABLE' : 'INVALID_RESPONSE',
+    );
   }
 
   @visibleForTesting
@@ -167,211 +253,230 @@ STYLE:
     if (error is TimeoutException) {
       return 'The AI service took too long to respond. Please retry.';
     }
-    if (error is InvalidApiKey || error is ServiceApiNotEnabled) {
-      return 'AI access is not configured for this app. Please contact support.';
-    }
-    if (error is QuotaExceeded) {
-      return 'The AI service is at its usage limit. Please try again later.';
-    }
-    if (error is UnsupportedUserLocation) {
-      return 'The AI service is not available in your region.';
+    if (error is GeminiBackendException) {
+      switch (error.code) {
+        case 'APP_CHECK_UNAVAILABLE':
+        case 'APP_CHECK_REJECTED':
+          return 'AI access could not be verified. Please try again later.';
+        case 'BACKEND_NOT_CONFIGURED':
+          return 'The AI service address is not configured for this app.';
+        case 'AI_NOT_CONFIGURED':
+          return 'The AI service is not configured. Please contact support.';
+        case 'RATE_LIMITED':
+        case 'AI_RATE_LIMITED':
+          return 'The AI service is busy. Please wait a moment and try again.';
+        case 'INVALID_REQUEST':
+          return 'The request could not be processed. Please try again.';
+        case 'INVALID_RESPONSE':
+        case 'INVALID_AI_RESPONSE':
+        case 'EMPTY_AI_RESPONSE':
+          return 'The AI service returned an incomplete response. Please retry.';
+        default:
+          return 'The AI service is temporarily unavailable. Please try again later.';
+      }
     }
     if (error is FormatException) {
       return error.message.startsWith('Choose a ')
           ? error.message
           : 'The AI service returned an incomplete plant analysis. Please retry with a clear photo.';
     }
-    final detail = error.toString().toLowerCase();
-    if (detail.contains('appcheck') ||
-        detail.contains('app check') ||
-        detail.contains('attestation')) {
-      return 'AI access could not be verified. Please try again later.';
-    }
-    if (detail.contains('not found') || detail.contains('not_found')) {
-      return 'The configured AI model is unavailable. Please try again later.';
-    }
-    if (detail.contains('no-app') || detail.contains('permission_denied')) {
-      return 'AI access is not configured for this app. Please contact support.';
-    }
     return 'Please check your connection and try again.';
-  }
-
-  GenerativeModel _createChatModel() {
-    final firebaseAI = FirebaseAI.googleAI();
-
-    return firebaseAI.generativeModel(
-      model: modelName,
-      systemInstruction: Content.system(_systemInstruction),
-      generationConfig: GenerationConfig(
-        temperature: 0.7,
-        maxOutputTokens: 1200,
-      ),
-    );
   }
 
   Stream<String> streamChatResponse({
     required String prompt,
     required List<Map<String, dynamic>> conversationHistory,
   }) async* {
-    try {
-      final model = _createChatModel();
+    final request = http.Request('POST', _endpoint('geminiChat'))
+      ..headers.addAll(await _requestHeaders())
+      ..body = jsonEncode({
+        'prompt': prompt,
+        'history': buildChatHistory(conversationHistory),
+      });
+    final response = await _httpClient.send(request).timeout(_requestTimeout);
+    if (response.statusCode != 200) {
+      throw await _responseError(response);
+    }
+    if (response.headers['content-type']?.contains('text/event-stream') !=
+        true) {
+      throw const GeminiBackendException('INVALID_RESPONSE');
+    }
 
-      final chat = model.startChat(
-        history: buildChatHistory(conversationHistory),
-      );
-
-      final responseStream = chat.sendMessageStream(Content.text(prompt));
-
-      var receivedText = false;
-      await for (final chunk in responseStream.timeout(_requestTimeout)) {
-        final text = chunk.text;
-
-        if (text != null && text.isNotEmpty) {
-          receivedText = true;
-          yield text;
-        }
+    var receivedText = false;
+    await for (final line
+        in response.stream
+            .transform(utf8.decoder)
+            .transform(const LineSplitter())
+            .timeout(_requestTimeout)) {
+      if (!line.startsWith('data:')) continue;
+      final data = line.substring(5).trim();
+      if (data == '[DONE]') break;
+      final decoded = jsonDecode(data);
+      if (decoded is! Map<String, dynamic>) {
+        throw const GeminiBackendException('INVALID_RESPONSE');
       }
-      if (!receivedText) {
-        yield 'The AI guide could not produce a response. Please try rephrasing your question.';
+      if (decoded['error'] is String) {
+        throw GeminiBackendException(decoded['error'] as String);
       }
-    } catch (e) {
-      yield '''
-### Connection issue
-
-I couldn't connect to Jeevan Sutra AI right now.
-
-${describeFailure(e)}
-''';
+      final text = decoded['text'];
+      if (text is String && text.isNotEmpty) {
+        receivedText = true;
+        yield text;
+      }
+    }
+    if (!receivedText) {
+      throw const GeminiBackendException('EMPTY_AI_RESPONSE');
     }
   }
 
   Future<PlantScanResult> analyzePlantImage(Uint8List imageBytes) async {
     try {
-      final model = FirebaseAI.googleAI().generativeModel(
-        model: modelName,
-        generationConfig: GenerationConfig(
-          temperature: 0.2,
-          responseMimeType: 'application/json',
-          responseSchema: Schema.object(
-            properties: {
-              'plantName': Schema.string(),
-              'sanskritName': Schema.string(nullable: true),
-              'hindiName': Schema.string(nullable: true),
-              'scientificName': Schema.string(nullable: true),
-              'confidence': Schema.number(minimum: 0, maximum: 1),
-              'identification': Schema.string(),
-              'traditionalUses': Schema.string(),
-              'scientificEvidence': Schema.string(),
-              'safetySummary': Schema.string(),
-              'precautions': Schema.array(items: Schema.string()),
-              'isToxic': Schema.boolean(),
-              'toxicityWarning': Schema.string(nullable: true),
-            },
-          ),
-        ),
-      );
-
-      const prompt = '''
-You are an expert botanical researcher and educational guide to Indian medicinal plants.
-
-Analyze the supplied botanical photograph carefully.
-
-Return ONLY valid JSON:
-
-{
-  "plantName": "Common English Name",
-  "sanskritName": "Sanskrit name if known",
-  "hindiName": "Hindi name if known",
-  "scientificName": "Genus species if reasonably identifiable",
-  "confidence": 0.0,
-  "identification": "Visible botanical characteristics",
-  "traditionalUses": "Traditional Ayurvedic or Indian uses",
-  "scientificEvidence": "Relevant scientific evidence",
-  "safetySummary": "General safety information",
-  "precautions": ["precaution 1", "precaution 2"],
-  "isToxic": false,
-  "toxicityWarning": null
-}
-
-Rules:
-- confidence must be between 0.0 and 1.0.
-- Do not invent certainty.
-- If the image is not a plant or identification is unreliable, use "Unidentified Botanical".
-- Never provide medical diagnosis or prescriptions.
-- Do not claim that a plant can cure a disease.
-- Clearly separate traditional uses from scientific evidence.
-- Return ONLY valid JSON.
-''';
-
-      final response = await model
-          .generateContent([
-            Content.multi([
-              TextPart(prompt),
-              InlineDataPart(imageMimeType(imageBytes), imageBytes),
-            ]),
-          ])
+      final endpoint = _endpoint('geminiPlant');
+      final headers = await _requestHeaders();
+      debugPrint('[AI_CAMERA] POST $endpoint');
+      final response = await _httpClient
+          .post(
+            endpoint,
+            headers: headers,
+            body: jsonEncode({
+              'mimeType': imageMimeType(imageBytes),
+              'imageBase64': base64Encode(imageBytes),
+            }),
+          )
           .timeout(_requestTimeout);
-
-      final responseText = response.text?.trim() ?? '';
-
-      if (responseText.isNotEmpty) {
-        final data = decodePlantResponse(responseText);
-
-        final plantName = data['plantName']?.toString().trim() ?? '';
-
-        final scientificName = data['scientificName']?.toString();
-        final sanskritName = data['sanskritName']?.toString();
-
-        final matched = await _findMatchingLocalPlant(
-          plantName: plantName,
-          scientificName: scientificName,
-          sanskritName: sanskritName,
-        );
-
-        final rawConfidence = data['confidence'];
-        final confidence = rawConfidence is num
-            ? rawConfidence.toDouble()
-            : double.tryParse(rawConfidence?.toString() ?? '') ?? 0.0;
-        return PlantScanResult(
-          plantName: plantName.isEmpty ? 'Unidentified Botanical' : plantName,
-          sanskritName: sanskritName,
-          hindiName: data['hindiName']?.toString(),
-          scientificName: scientificName,
-          confidence: confidence.isFinite
-              ? confidence.clamp(0.0, 1.0).toDouble()
-              : 0.0,
-          identification:
-              data['identification']?.toString() ??
-              'Visual botanical characteristics were analyzed.',
-          traditionalUses:
-              data['traditionalUses']?.toString() ??
-              'Traditional information was not confidently identified.',
-          scientificEvidence:
-              data['scientificEvidence']?.toString() ??
-              'No specific scientific evidence was confidently identified.',
-          safetySummary:
-              data['safetySummary']?.toString() ??
-              'Do not use an unidentified plant medicinally.',
-          precautions:
-              (data['precautions'] is List ? data['precautions'] as List : null)
-                  ?.map((item) => item.toString())
-                  .toList() ??
-              const [],
-          isToxic: data['isToxic'] == true,
-          toxicityWarning: data['toxicityWarning']?.toString(),
-          matchedLocalPlant: matched,
-        );
+      debugPrint('[AI_CAMERA] Response code: ${response.statusCode}');
+      debugPrint('[AI_CAMERA] Response body: ${response.body}');
+      if (response.statusCode != 200) {
+        throw _jsonResponseError(response);
       }
-    } catch (error) {
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) {
+        throw const FormatException('Plant analysis must be a JSON object.');
+      }
+      final result = parsePlantScanResult(decoded);
+      Plant? matched;
+      if (result.organismType == 'plant') {
+        try {
+          matched = await _findMatchingLocalPlant(
+            plantName: result.plantName,
+            scientificName: result.scientificName,
+            sanskritName: result.sanskritName,
+          );
+        } catch (_) {
+          // A local content lookup must never discard a successful AI result.
+        }
+      }
+      return matched == null
+          ? result
+          : parsePlantScanResult(decoded, matchedLocalPlant: matched);
+    } catch (error, stack) {
+      debugPrint('[AI_CAMERA] analyzePlantImage caught error: $error\n$stack');
       return _unavailablePlantResult(describeFailure(error));
     }
+  }
 
-    return _unavailablePlantResult();
+  static PlantScanResult parsePlantScanResult(
+    Map<String, dynamic> data, {
+    Plant? matchedLocalPlant,
+  }) {
+    String? stringField(String key) {
+      final value = data[key];
+      return value is String && value.trim().isNotEmpty ? value.trim() : null;
+    }
+
+    final rawConfidence = data['confidence'];
+    final parsedConfidence = rawConfidence is num
+        ? rawConfidence.toDouble()
+        : double.tryParse(rawConfidence?.toString() ?? '') ?? 0.0;
+    final confidence =
+        parsedConfidence.isFinite &&
+            parsedConfidence >= 0.0 &&
+            parsedConfidence <= 1.0
+        ? parsedConfidence
+        : 0.0;
+
+    const organismTypes = ['plant', 'fungus', 'non-plant', 'uncertain'];
+    final rawOrganismType = data['organismType'];
+    final reportedType =
+        rawOrganismType is String && organismTypes.contains(rawOrganismType)
+        ? rawOrganismType
+        : 'uncertain';
+    final organismType = confidence < 0.6 ? 'uncertain' : reportedType;
+    final isPlant = organismType == 'plant';
+    const medicinalClassifications = ['medicinal', 'non-medicinal', 'unknown'];
+    final rawMedicinalClassification = stringField('medicinalClassification');
+    final isToxic = data['isToxic'] is bool ? data['isToxic'] as bool : null;
+    final rawToxicityWarning = stringField('toxicityWarning');
+    final toxicityWarning =
+        rawToxicityWarning ??
+        (isToxic == true
+            ? 'Potential toxicity was reported. Do not touch or consume this organism.'
+            : null);
+    final rawPrecautions = data['precautions'];
+    final precautions = isPlant && rawPrecautions is List
+        ? rawPrecautions.whereType<String>().toList()
+        : <String>[];
+    precautions.add(
+      isPlant
+          ? 'Image identification cannot establish safety or edibility. Do not consume based on this result.'
+          : 'Do not consume or use an unidentified organism medicinally.',
+    );
+
+    final rawName = stringField('plantName');
+    final plantName = switch (organismType) {
+      'fungus' => 'Fungus detected (not a plant)',
+      'non-plant' => 'No plant detected',
+      _ => rawName ?? 'Unidentified Botanical',
+    };
+
+    return PlantScanResult(
+      plantName: plantName,
+      sanskritName: isPlant ? stringField('sanskritName') : null,
+      hindiName: isPlant ? stringField('hindiName') : null,
+      scientificName: isPlant ? stringField('scientificName') : null,
+      family: isPlant ? stringField('family') : null,
+      plantCategory: isPlant ? stringField('plantCategory') : null,
+      medicinalClassification:
+          isPlant &&
+              medicinalClassifications.contains(rawMedicinalClassification)
+          ? rawMedicinalClassification
+          : null,
+      growingInformation: isPlant ? stringField('growingInformation') : null,
+      organismType: organismType,
+      confidence: confidence,
+      identification: isPlant
+          ? stringField('identification') ??
+                'Visible plant characteristics were not provided.'
+          : switch (organismType) {
+              'fungus' => 'A fungus was identified, not a plant.',
+              'non-plant' => 'No plant was identified in this image.',
+              _ =>
+                'The image does not support a reliable plant identification.',
+            },
+      traditionalUses: isPlant
+          ? stringField('traditionalUses') ??
+                'Traditional uses were not confidently identified.'
+          : 'Not shown because this image is not confidently identified as a plant.',
+      scientificEvidence: isPlant
+          ? stringField('scientificEvidence') ??
+                'No specific scientific evidence was confidently identified.'
+          : 'Not shown because this image is not confidently identified as a plant.',
+      safetySummary: isPlant
+          ? 'Image identification cannot establish safety or edibility. Do not consume or use medicinally based only on this result.'
+          : 'This image is not confirmed as a plant. Do not consume or use it medicinally.',
+      precautions: precautions,
+      isToxic: isToxic,
+      toxicityWarning: toxicityWarning,
+      matchedLocalPlant: matchedLocalPlant,
+    );
   }
 
   PlantScanResult _unavailablePlantResult([String? reason]) => PlantScanResult(
     plantName: 'Unable to identify plant',
+    organismType: 'uncertain',
     confidence: 0.0,
+    liveAiAvailable: false,
     identification: reason ?? 'AI analysis could not complete. Retry with a clear photo of one plant.',
     traditionalUses:
         'Not shown because the plant could not be identified reliably.',
@@ -384,7 +489,8 @@ Rules:
     String? scientificName,
     String? sanskritName,
   }) async {
-    final plants = await ContentRepository.loadPlants();
+    final plants =
+        await (_plantLoader?.call() ?? ContentRepository.loadPlants());
 
     final pLower = plantName.toLowerCase();
     final sLower = scientificName?.toLowerCase() ?? '';

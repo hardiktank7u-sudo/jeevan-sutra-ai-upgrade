@@ -50,12 +50,31 @@ class _MedicinalPlantsScreenState extends State<MedicinalPlantsScreen> {
       final results = await Future.wait([
         LocalStorageService.instance.getSavedPlants(),
         ContentRepository.loadPlants(),
+        LocalStorageService.instance.getSavedPlantRecords(),
       ]);
 
       if (!mounted) return;
+      final localPlants = List<Plant>.from(results[1] as List<Plant>);
+      final savedRecords = List<Plant>.from(results[2] as List<Plant>);
+      for (final record in savedRecords) {
+        if (record.organismType != 'plant') continue;
+        if (record.confidence != null && record.confidence! < 0.6) continue;
+        final index = localPlants.indexWhere(
+          (plant) =>
+              plant.commonName.toLowerCase() ==
+                  record.commonName.toLowerCase() ||
+              plant.botanicalName.toLowerCase() ==
+                  record.botanicalName.toLowerCase(),
+        );
+        if (index >= 0) {
+          localPlants[index] = record;
+        } else {
+          localPlants.insert(0, record);
+        }
+      }
       setState(() {
         _savedPlants = Set<String>.from(results[0] as List<String>);
-        _plants = List<Plant>.from(results[1] as List<Plant>);
+        _plants = localPlants;
         _loading = false;
       });
     } catch (e) {
@@ -74,7 +93,10 @@ class _MedicinalPlantsScreenState extends State<MedicinalPlantsScreen> {
       setState(() => _savedPlants.add(name));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("$name saved to your botanical sanctuary."), duration: const Duration(seconds: 1)),
+          SnackBar(
+            content: Text("$name saved to your botanical sanctuary."),
+            duration: const Duration(seconds: 1),
+          ),
         );
       }
     }
@@ -86,14 +108,18 @@ class _MedicinalPlantsScreenState extends State<MedicinalPlantsScreen> {
 
     final filteredPlants = _plants.where((p) {
       final q = _searchQuery.toLowerCase();
-      final matchesSearch = q.isEmpty ||
+      final matchesSearch =
+          q.isEmpty ||
           p.commonName.toLowerCase().contains(q) ||
           (p.sanskritName?.toLowerCase().contains(q) ?? false) ||
           p.botanicalName.toLowerCase().contains(q) ||
           (p.primaryUses?.toLowerCase().contains(q) ?? false);
 
-      final matchesCategory = _selectedCategory == 'All' ||
-          p.category.toLowerCase().contains(_selectedCategory.split(' ').first.toLowerCase());
+      final matchesCategory =
+          _selectedCategory == 'All' ||
+          p.category.toLowerCase().contains(
+            _selectedCategory.split(' ').first.toLowerCase(),
+          );
 
       return matchesSearch && matchesCategory;
     }).toList();
@@ -110,7 +136,11 @@ class _MedicinalPlantsScreenState extends State<MedicinalPlantsScreen> {
       body: BotanicalBackground(
         child: SafeArea(
           child: _loading
-              ? const Center(child: CircularProgressIndicator(color: JeevanSutraColors.forestGreen))
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    color: JeevanSutraColors.forestGreen,
+                  ),
+                )
               : SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
@@ -143,7 +173,9 @@ class _MedicinalPlantsScreenState extends State<MedicinalPlantsScreen> {
             Icon(
               Icons.eco_rounded,
               size: 14,
-              color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+              color: isDark
+                  ? JeevanSutraColors.freshLeaf
+                  : JeevanSutraColors.forestGreen,
             ),
             const SizedBox(width: 6),
             Text(
@@ -152,7 +184,9 @@ class _MedicinalPlantsScreenState extends State<MedicinalPlantsScreen> {
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.1,
-                color: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+                color: isDark
+                    ? JeevanSutraColors.freshLeaf
+                    : JeevanSutraColors.forestGreen,
               ),
             ),
           ],
@@ -164,7 +198,9 @@ class _MedicinalPlantsScreenState extends State<MedicinalPlantsScreen> {
             fontSize: 24,
             fontWeight: FontWeight.bold,
             letterSpacing: -0.3,
-            color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+            color: isDark
+                ? JeevanSutraColors.darkTextPrimary
+                : JeevanSutraColors.forestGreen,
           ),
         ),
         const SizedBox(height: 2),
@@ -172,7 +208,9 @@ class _MedicinalPlantsScreenState extends State<MedicinalPlantsScreen> {
           "Phytochemical pharmacology, traditional virya, and therapeutic applications.",
           style: TextStyle(
             fontSize: 12,
-            color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+            color: isDark
+                ? JeevanSutraColors.darkTextSecondary
+                : JeevanSutraColors.secondaryText,
           ),
         ),
       ],
@@ -184,10 +222,14 @@ class _MedicinalPlantsScreenState extends State<MedicinalPlantsScreen> {
   Widget _buildSearchBar(bool isDark) {
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+        color: isDark
+            ? JeevanSutraColors.darkSurface
+            : JeevanSutraColors.pureWhite,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
+          color: isDark
+              ? JeevanSutraColors.darkBorder
+              : JeevanSutraColors.subtleBorder,
         ),
       ),
       child: TextField(
@@ -195,13 +237,17 @@ class _MedicinalPlantsScreenState extends State<MedicinalPlantsScreen> {
         onChanged: (val) => setState(() => _searchQuery = val),
         style: TextStyle(
           fontSize: 12.5,
-          color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.mainText,
+          color: isDark
+              ? JeevanSutraColors.darkTextPrimary
+              : JeevanSutraColors.mainText,
         ),
         decoration: InputDecoration(
           hintText: "Search by common, Latin, or Sanskrit name...",
           hintStyle: TextStyle(
             fontSize: 12,
-            color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+            color: isDark
+                ? JeevanSutraColors.darkTextSecondary
+                : JeevanSutraColors.secondaryText,
           ),
           prefixIcon: const Icon(Icons.search_rounded, size: 20),
           suffixIcon: _searchQuery.isNotEmpty
@@ -214,7 +260,10 @@ class _MedicinalPlantsScreenState extends State<MedicinalPlantsScreen> {
                 )
               : null,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
         ),
       ),
     );
@@ -238,20 +287,28 @@ class _MedicinalPlantsScreenState extends State<MedicinalPlantsScreen> {
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                 color: isSelected
                     ? Colors.white
-                    : (isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.mainText),
+                    : (isDark
+                          ? JeevanSutraColors.darkTextSecondary
+                          : JeevanSutraColors.mainText),
               ),
               selected: isSelected,
               onSelected: (val) {
                 if (val) setState(() => _selectedCategory = cat);
               },
-              backgroundColor: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
-              selectedColor: isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen,
+              backgroundColor: isDark
+                  ? JeevanSutraColors.darkSurface
+                  : JeevanSutraColors.pureWhite,
+              selectedColor: isDark
+                  ? JeevanSutraColors.freshLeaf
+                  : JeevanSutraColors.forestGreen,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
                 side: BorderSide(
                   color: isSelected
                       ? Colors.transparent
-                      : (isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder),
+                      : (isDark
+                            ? JeevanSutraColors.darkBorder
+                            : JeevanSutraColors.subtleBorder),
                 ),
               ),
               showCheckmark: false,
@@ -274,7 +331,9 @@ class _MedicinalPlantsScreenState extends State<MedicinalPlantsScreen> {
             "No botanical specimens found matching your query.",
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+              color: isDark
+                  ? JeevanSutraColors.darkTextSecondary
+                  : JeevanSutraColors.secondaryText,
             ),
           ),
         ),
@@ -303,10 +362,14 @@ class _MedicinalPlantsScreenState extends State<MedicinalPlantsScreen> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isDark ? JeevanSutraColors.darkSurface : JeevanSutraColors.pureWhite,
+              color: isDark
+                  ? JeevanSutraColors.darkSurface
+                  : JeevanSutraColors.pureWhite,
               borderRadius: BorderRadius.circular(22),
               border: Border.all(
-                color: isDark ? JeevanSutraColors.darkBorder : JeevanSutraColors.subtleBorder,
+                color: isDark
+                    ? JeevanSutraColors.darkBorder
+                    : JeevanSutraColors.subtleBorder,
               ),
               boxShadow: [
                 BoxShadow(
@@ -323,10 +386,16 @@ class _MedicinalPlantsScreenState extends State<MedicinalPlantsScreen> {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: isDark ? JeevanSutraColors.darkCanvas : JeevanSutraColors.softSage,
+                    color: isDark
+                        ? JeevanSutraColors.darkCanvas
+                        : JeevanSutraColors.softSage,
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: const Icon(Icons.eco_rounded, color: JeevanSutraColors.forestGreen, size: 22),
+                  child: const Icon(
+                    Icons.eco_rounded,
+                    color: JeevanSutraColors.forestGreen,
+                    size: 22,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -342,15 +411,22 @@ class _MedicinalPlantsScreenState extends State<MedicinalPlantsScreen> {
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
-                                color: isDark ? JeevanSutraColors.darkTextPrimary : JeevanSutraColors.forestGreen,
+                                color: isDark
+                                    ? JeevanSutraColors.darkTextPrimary
+                                    : JeevanSutraColors.forestGreen,
                               ),
                             ),
                           ),
                           if (plant.doshaImpact != null)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
-                                color: isDark ? JeevanSutraColors.darkCanvas : JeevanSutraColors.warmIvory,
+                                color: isDark
+                                    ? JeevanSutraColors.darkCanvas
+                                    : JeevanSutraColors.warmIvory,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
@@ -369,7 +445,9 @@ class _MedicinalPlantsScreenState extends State<MedicinalPlantsScreen> {
                         style: TextStyle(
                           fontSize: 11,
                           fontStyle: FontStyle.italic,
-                          color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText,
+                          color: isDark
+                              ? JeevanSutraColors.darkTextSecondary
+                              : JeevanSutraColors.secondaryText,
                         ),
                       ),
                       if (plant.primaryUses != null) ...[
@@ -380,7 +458,9 @@ class _MedicinalPlantsScreenState extends State<MedicinalPlantsScreen> {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 11.5,
-                            color: isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.mainText,
+                            color: isDark
+                                ? JeevanSutraColors.darkTextSecondary
+                                : JeevanSutraColors.mainText,
                           ),
                         ),
                       ],
@@ -389,10 +469,16 @@ class _MedicinalPlantsScreenState extends State<MedicinalPlantsScreen> {
                 ),
                 IconButton(
                   icon: Icon(
-                    isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                    isSaved
+                        ? Icons.bookmark_rounded
+                        : Icons.bookmark_border_rounded,
                     color: isSaved
-                        ? (isDark ? JeevanSutraColors.freshLeaf : JeevanSutraColors.forestGreen)
-                        : (isDark ? JeevanSutraColors.darkTextSecondary : JeevanSutraColors.secondaryText),
+                        ? (isDark
+                              ? JeevanSutraColors.freshLeaf
+                              : JeevanSutraColors.forestGreen)
+                        : (isDark
+                              ? JeevanSutraColors.darkTextSecondary
+                              : JeevanSutraColors.secondaryText),
                     size: 20,
                   ),
                   onPressed: () => _toggleBookmark(plant),
